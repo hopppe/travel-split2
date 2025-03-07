@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to read and write trips
+    match /trips/{tripId} {
+      // Anyone authenticated can read a trip
+      allow read: if request.auth != null;
+      
+      // Anyone authenticated can initially create a trip
+      allow create: if request.auth != null;
+      
+      // For updates, the user must be authenticated and either:
+      // 1. They're the trip creator (first participant)
+      // 2. They're a claimed participant in the trip
+      // 3. They're adding themselves as a participant
+      allow update: if request.auth != null && (
+        // Check if the user is the creator (first participant)
+        (resource.data.participants.size() > 0 && 
+         resource.data.participants[0].id == request.auth.uid) ||
+         
+        // Or if they're already a claimed participant in the trip
+        (resource.data.participants.filter(p => p.id == request.auth.uid).size() > 0) ||
+        
+        // Or they're adding themselves as a participant (joining a trip)
+        (request.resource.data.participants.filter(p => p.id == request.auth.uid).size() > 0)
+      );
+    }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
