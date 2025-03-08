@@ -1,16 +1,20 @@
 # Travel Split
 
-Travel Split is an iOS app designed to simplify expense sharing between friends during trips. Similar to Splitwise, it allows users to track expenses, split costs equally or customly, and see who owes what to whom.
+A mobile app that helps friends and travel groups split expenses easily while traveling together.
 
 ## Features
 
-- **Create Trips**: Create trip groups to track expenses together
-- **Invite Friends**: Share invite links to add friends to your trips
-- **Add Expenses**: Quickly add expenses with descriptions and amounts
-- **Flexible Splitting**: Split expenses equally by default, or customize splits as needed
-- **Balance Calculation**: Automatically calculate who owes what to whom
-- **Expense Categories**: Categorize expenses for better organization
-- **Simple Interface**: Clean, intuitive UI following Apple's design guidelines
+- Create trips and add participants
+- Add expenses with custom splitting options
+- Track who owes what to whom
+- Add placeholder participants that others can claim
+- Share trips with friends using invite codes
+
+## Technical Details
+
+- Built with SwiftUI
+- Uses Firebase for backend storage and authentication
+- Implements real-time updates for expenses and balances
 
 ## How to Use
 
@@ -43,14 +47,6 @@ Travel Split is an iOS app designed to simplify expense sharing between friends 
 2. Tap the "Balances" tab
 3. See a summary of who owes what to whom
 4. View total trip cost and average per person
-
-## Technical Details
-
-The app follows a clean architecture pattern:
-
-- **Models**: Core data structures (User, Trip, Expense)
-- **ViewModels**: Business logic and state management
-- **Views**: UI components and user interaction
 
 ## Development
 
