@@ -39,7 +39,7 @@ struct ParticipantClaimView: View {
                         ForEach(potentialMatches) { participant in
                             Button(action: {
                                 viewModel.claimParticipant(participant, inTrip: trip)
-                                dismiss()
+                                completeJoining()
                             }) {
                                 ParticipantMatchRow(participant: participant)
                             }
@@ -51,7 +51,7 @@ struct ParticipantClaimView: View {
                     Section {
                         Button(action: {
                             viewModel.addCurrentUserToTrip(trip)
-                            dismiss()
+                            completeJoining()
                         }) {
                             HStack {
                                 Text("Join as a new participant")
@@ -76,11 +76,31 @@ struct ParticipantClaimView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        dismiss()
+                        cancelJoining()
                     }
                 }
             }
         }
+    }
+    
+    // Handle completion of joining a trip - dismiss all sheets
+    private func completeJoining() {
+        // Reset the view state
+        viewModel.showParticipantClaimingView = false
+        viewModel.potentialClaimableParticipants = []
+        
+        // Dismiss this view
+        dismiss()
+    }
+    
+    // Handle cancellation of joining a trip
+    private func cancelJoining() {
+        // Reset the view state
+        viewModel.showParticipantClaimingView = false
+        viewModel.potentialClaimableParticipants = []
+        
+        // Dismiss this view
+        dismiss()
     }
 }
 

@@ -120,14 +120,19 @@ class TripViewModel: ObservableObject {
     }
     
     // Create a new trip and save to Firestore
-    func createNewTrip(name: String, description: String) {
+    func createNewTrip(name: String, description: String, initialParticipants: [User] = []) {
         isLoading = true
         
-        let newTrip = Trip.create(
+        var newTrip = Trip.create(
             name: name,
             description: description,
             creator: currentUser
         )
+        
+        // Add initial participants if any (besides the creator who is already added)
+        if !initialParticipants.isEmpty {
+            newTrip.participants.append(contentsOf: initialParticipants)
+        }
         
         // Save to Firestore
         FirebaseService.shared.saveTrip(newTrip) { [weak self] success, error in
@@ -175,7 +180,19 @@ class TripViewModel: ObservableObject {
             if existingTrip.participants.contains(where: { $0.id == currentUser.id }) {
                 errorMessage = "You are already a participant in this trip"
             } else {
-                // Add self to the trip locally
+                // Check for unclaimed participants that could be claimed
+                let unclaimedParticipants = getUnclaimedParticipants(in: existingTrip)
+                
+                if !unclaimedParticipants.isEmpty {
+                    // We have unclaimed participants - show the claim view instead of auto-joining
+                    potentialClaimableParticipants = unclaimedParticipants
+                    showParticipantClaimingView = true
+                    isLoading = false
+                    currentTrip = existingTrip
+                    return
+                }
+                
+                // No unclaimed participants - add self to the trip locally
                 var updatedTrip = existingTrip
                 updatedTrip.participants.append(currentUser)
                 
@@ -221,7 +238,24 @@ class TripViewModel: ObservableObject {
                 return
             }
             
-            // Add self to trip
+            // Check for unclaimed participants that could be claimed
+            let unclaimedParticipants = self.getUnclaimedParticipants(in: trip)
+            
+            if !unclaimedParticipants.isEmpty {
+                // We have unclaimed participants - show the claim view instead of auto-joining
+                self.potentialClaimableParticipants = unclaimedParticipants
+                self.showParticipantClaimingView = true
+                self.currentTrip = trip
+                
+                // Add trip to local trips array if not already there
+                if !self.trips.contains(where: { $0.id == trip.id }) {
+                    self.trips.append(trip)
+                }
+                
+                return
+            }
+            
+            // No unclaimed participants - add self to trip
             trip.participants.append(self.currentUser)
             
             // Save updated trip to Firestore
@@ -250,51 +284,72 @@ class TripViewModel: ObservableObject {
             return
         }
         
-        var expense: Expense
-        
-        switch splitType {
-        case .equal:
-            expense = Expense.createEqual(
-                title: title,
-                amount: amount,
-                paidBy: paidBy,
-                participants: trip.participants,
-                category: category,
-                currencyCode: currencyCode
-            )
-        case .custom:
-            guard let shares = customShares, !shares.isEmpty else {
-                errorMessage = "Custom shares must be provided for custom split"
-                return
-            }
-            expense = Expense.createCustom(
-                title: title,
-                amount: amount,
-                paidBy: paidBy,
-                shares: shares,
-                category: category,
-                currencyCode: currencyCode
-            )
-        }
-        
-        // Add expense to trip
-        trip.expenses.append(expense)
-        
-        // Update trip in array locally
-        if let index = trips.firstIndex(where: { $0.id == trip.id }) {
-            trips[index] = trip
-            currentTrip = trip
-        }
-        
-        // Save trip with new expense to Firestore
-        isLoading = true
-        FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
-            guard let self = self else { return }
-            self.isLoading = false
+        // Safeguard against using an invalid paidBy user
+        // Make sure the paidBy user is in the participant list (and get the latest version)
+        if let validPaidBy = trip.participants.first(where: { $0.id == paidBy.id }) {
+            var expense: Expense
             
-            if let error = error {
-                self.errorMessage = "Error saving expense: \(error.localizedDescription)"
+            switch splitType {
+            case .equal:
+                // Make sure we're using valid participant references from the trip
+                // This prevents issues with stale user references
+                expense = Expense.createEqual(
+                    title: title,
+                    amount: amount,
+                    paidBy: validPaidBy,
+                    participants: trip.participants,
+                    category: category,
+                    currencyCode: currencyCode
+                )
+            case .custom:
+                guard let shares = customShares, !shares.isEmpty else {
+                    errorMessage = "Custom shares must be provided for custom split"
+                    return
+                }
+                
+                // Validate and update shares to use valid participant references
+                var validShares = [ExpenseShare]()
+                for share in shares {
+                    if let validUser = trip.participants.first(where: { $0.id == share.user.id }) {
+                        let validShare = ExpenseShare(user: validUser, amount: share.amount, percentage: share.percentage)
+                        validShares.append(validShare)
+                    } else {
+                        errorMessage = "Invalid participant in expense share"
+                        return
+                    }
+                }
+                
+                expense = Expense.createCustom(
+                    title: title,
+                    amount: amount,
+                    paidBy: validPaidBy,
+                    shares: validShares,
+                    category: category,
+                    currencyCode: currencyCode
+                )
             }
+            
+            // Add expense to trip
+            trip.expenses.append(expense)
+            
+            // Update trip in array locally
+            if let index = trips.firstIndex(where: { $0.id == trip.id }) {
+                trips[index] = trip
+                currentTrip = trip
+            }
+            
+            // Save trip with new expense to Firestore
+            isLoading = true
+            FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                if let error = error {
+                    self.errorMessage = "Error saving expense: \(error.localizedDescription)"
+                }
+            }
+        } else {
+            errorMessage = "Selected payer is not a valid participant in this trip"
         }
     }
     
@@ -546,8 +601,34 @@ class TripViewModel: ObservableObject {
             updatedParticipant.email = currentUser.email
         }
         
+        // Store the original ID for expense and share updates
+        let originalParticipantId = participant.id
+        
         // Replace in the participants array
         updatedTrip.participants[participantIndex] = updatedParticipant
+        
+        // Update all expenses to reflect the claimed participant
+        // This is crucial for balance calculation and expense creation
+        for expenseIndex in 0..<updatedTrip.expenses.count {
+            var expense = updatedTrip.expenses[expenseIndex]
+            
+            // Update the paidBy field if this participant paid for the expense
+            if expense.paidBy.id == originalParticipantId {
+                expense.paidBy = updatedParticipant
+            }
+            
+            // Update the user in expense shares
+            for shareIndex in 0..<expense.shares.count {
+                if expense.shares[shareIndex].user.id == originalParticipantId {
+                    var updatedShare = expense.shares[shareIndex]
+                    updatedShare.user = updatedParticipant
+                    expense.shares[shareIndex] = updatedShare
+                }
+            }
+            
+            // Update the expense in the trip
+            updatedTrip.expenses[expenseIndex] = expense
+        }
         
         // Update trip in array locally
         if let tripIndex = trips.firstIndex(where: { $0.id == trip.id }) {
@@ -568,6 +649,23 @@ class TripViewModel: ObservableObject {
     }
     
     // MARK: - User Management
+    
+    // Find the current user's participant in the trip (handles both direct and claimed participants)
+    func findCurrentUserInTrip() -> User? {
+        guard let trip = currentTrip else {
+            return nil
+        }
+        
+        // First check if the current user is directly in the trip
+        if let directUser = trip.participants.first(where: { $0.id == currentUser.id }) {
+            return directUser
+        }
+        
+        // Then check if the current user has claimed any participant
+        return trip.participants.first(where: { 
+            $0.isClaimed && $0.claimedByUserId == currentUser.id 
+        })
+    }
     
     // Update the current user
     func updateCurrentUser(_ user: User) {
@@ -634,6 +732,12 @@ class TripViewModel: ObservableObject {
         let userId = firebaseUserId ?? UUID().uuidString
         print("Creating new default user with ID: \(userId)")
         return User.create(name: "You", email: "you@example.com")
+    }
+    
+    // Get a list of unclaimed participants in a trip
+    func getUnclaimedParticipants(in trip: Trip) -> [User] {
+        // Return all participants that are not claimed
+        return trip.participants.filter { !$0.isClaimed }
     }
 }
 

@@ -93,11 +93,19 @@ struct BalancesContentView: View {
         List {
             // User balance overview section
             Section(header: Text("Your Balance")) {
-                UserBalanceRow(
-                    user: viewModel.currentUser,
-                    balance: calculateUserBalance(for: viewModel.currentUser.id),
-                    isCurrentUser: true
-                )
+                if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
+                    UserBalanceRow(
+                        user: currentUserInTrip,
+                        balance: calculateUserBalance(for: currentUserInTrip.id),
+                        isCurrentUser: true
+                    )
+                } else {
+                    UserBalanceRow(
+                        user: viewModel.currentUser,
+                        balance: calculateUserBalance(for: viewModel.currentUser.id),
+                        isCurrentUser: true
+                    )
+                }
             }
             
             // Debts section

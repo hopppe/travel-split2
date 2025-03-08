@@ -155,8 +155,12 @@ struct AddExpenseSheet: View {
     
     /// Initialize default values for new expense
     private func initializeDefaults() {
-        // Default to current user as payer
-        selectedPayer = viewModel.currentUser
+        // Default to current user as payer, but use their claimed participant if available
+        if let userInTrip = viewModel.findCurrentUserInTrip() {
+            selectedPayer = userInTrip
+        } else {
+            selectedPayer = viewModel.currentUser
+        }
         
         // Default select all participants
         if let trip = viewModel.currentTrip {

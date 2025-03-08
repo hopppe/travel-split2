@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct AddParticipantSheet: View {
     @ObservedObject var viewModel: TripViewModel
@@ -90,12 +91,6 @@ struct AddParticipantSheet: View {
         // Dismiss the sheet
         dismiss()
     }
-}
-
-// Helper struct for participant entry
-struct ParticipantEntry {
-    var name: String = ""
-    var email: String = ""
 }
 
 // Preview provider

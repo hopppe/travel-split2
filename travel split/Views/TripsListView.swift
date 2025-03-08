@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 // MARK: - Main Trip List View
 /// The main view that displays all trips and provides options to create or join trips
@@ -307,6 +308,9 @@ struct NewTripSheet: View {
     @Binding var tripName: String
     @Binding var tripDescription: String
     
+    @State private var participants: [ParticipantEntry] = []
+    @State private var showingParticipantsSection = false
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -318,8 +322,68 @@ struct NewTripSheet: View {
                         .accessibilityLabel("Trip description")
                 }
                 
+                // Participants section that can be toggled
                 Section {
-                    Text("Enter details for your new trip. You can add participants and expenses after creating the trip.")
+                    Button(action: {
+                        if !showingParticipantsSection {
+                            // Add one empty participant entry when toggling on
+                            if participants.isEmpty {
+                                participants = [ParticipantEntry()]
+                            }
+                            showingParticipantsSection = true
+                        } else {
+                            showingParticipantsSection = false
+                        }
+                    }) {
+                        HStack {
+                            Text(showingParticipantsSection ? "Hide Participants" : "Add Participants")
+                                .foregroundColor(.accentColor)
+                            
+                            Spacer()
+                            
+                            Image(systemName: showingParticipantsSection ? "chevron.up" : "chevron.down")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+                
+                if showingParticipantsSection {
+                    Section(header: Text("Participants")) {
+                        ForEach(0..<participants.count, id: \.self) { index in
+                            VStack(spacing: 12) {
+                                TextField("Name", text: $participants[index].name)
+                                    .padding(.vertical, 4)
+                                
+                                TextField("Email (optional)", text: $participants[index].email)
+                                    .keyboardType(.emailAddress)
+                                    .autocapitalization(.none)
+                                    .padding(.vertical, 4)
+                                
+                                if participants.count > 1 && index < participants.count - 1 {
+                                    Divider()
+                                        .padding(.vertical, 4)
+                                }
+                            }
+                        }
+                        
+                        Button(action: {
+                            participants.append(ParticipantEntry())
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.accentColor)
+                                Text("Add More")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+                
+                Section {
+                    Text(showingParticipantsSection 
+                         ? "Add participants now or you can add them later after creating the trip."
+                         : "Enter details for your new trip. You can add participants and expenses after creating the trip.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -337,21 +401,47 @@ struct NewTripSheet: View {
                     Button("Create") {
                         createTrip()
                     }
-                    .disabled(tripName.isEmpty)
+                    .disabled(!isFormValid)
                 }
             }
         }
     }
     
+    // Form validation
+    private var isFormValid: Bool {
+        !tripName.isEmpty && (!showingParticipantsSection || participants.allSatisfy { !$0.name.isEmpty })
+    }
+    
     /// Creates a new trip with the entered details
     private func createTrip() {
+        // Process participants if section is shown
+        var initialParticipants: [User] = []
+        
+        if showingParticipantsSection {
+            // Filter out empty entries
+            let validParticipants = participants.filter { !$0.name.isEmpty }
+            
+            // Create unclaimed participants
+            initialParticipants = validParticipants.map { entry in
+                User.createUnclaimed(
+                    name: entry.name,
+                    email: entry.email
+                )
+            }
+        }
+        
+        // Create the trip with initial participants
         viewModel.createNewTrip(
             name: tripName,
-            description: tripDescription
+            description: tripDescription,
+            initialParticipants: initialParticipants
         )
+        
         // Reset fields
         tripName = ""
         tripDescription = ""
+        participants = []
+        showingParticipantsSection = false
         isPresented = false
     }
 }
@@ -395,12 +485,32 @@ struct JoinTripSheet: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $viewModel.showParticipantClaimingView) {
+            if let trip = viewModel.currentTrip, !viewModel.potentialClaimableParticipants.isEmpty {
+                ParticipantClaimView(
+                    viewModel: viewModel,
+                    potentialMatches: viewModel.potentialClaimableParticipants,
+                    trip: trip
+                )
+            }
+        }
+        .onChange(of: viewModel.showParticipantClaimingView) { newValue in
+            // When the participant claim view is dismissed, also dismiss this sheet
+            if !newValue {
+                inviteCode = ""
+                isPresented = false
+            }
+        }
     }
     
     /// Joins a trip with the entered invite code
     private func joinTrip() {
         viewModel.joinTrip(withInviteCode: inviteCode)
-        inviteCode = ""
-        isPresented = false
+        
+        // Only dismiss this sheet if we're not showing the claim view
+        if !viewModel.showParticipantClaimingView {
+            inviteCode = ""
+            isPresented = false
+        }
     }
 } 
