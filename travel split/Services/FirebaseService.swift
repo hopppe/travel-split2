@@ -224,6 +224,31 @@ class FirebaseService {
         
         return "unclaimed_\(authUserId)_\(randomPart)_\(sanitizedName)"
     }
+    
+    // MARK: - Trip Operations
+    
+    /// Delete a trip from Firestore
+    func deleteTrip(withId id: String, completion: @escaping (Error?) -> Void) {
+        guard isAuthenticated else {
+            completion(NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]))
+            return
+        }
+        
+        // Delete the trip document
+        let tripRef = Firestore.firestore().collection("trips").document(id)
+        tripRef.delete { error in
+            if let error = error {
+                print("Error deleting trip: \(error)")
+                completion(error)
+                return
+            }
+            
+            print("Trip successfully deleted")
+            completion(nil)
+        }
+    }
+    
+    // MARK: - Expense Operations
 }
 
 // MARK: - Helper Extensions

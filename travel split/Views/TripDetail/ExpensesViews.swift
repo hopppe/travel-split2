@@ -125,50 +125,48 @@ struct ExpenseRowView: View {
     @ObservedObject var viewModel: TripViewModel
     let expense: Expense
     let onEdit: () -> Void
+    @State private var isShowingDeleteConfirmation = false
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
     
     var body: some View {
-        Button(action: onEdit) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(expense.title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
-                        Text("Paid by \(payer.name)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                CurrencyText(
-                    amount: expense.amount,
-                    symbol: expense.currencySymbol,
-                    color: .primary,
-                    font: .headline
-                )
-            }
-            .padding()
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(12)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
+        ExpenseButton(
+            expense: expense,
+            trip: trip,
+            dateFormatter: dateFormatter,
+            onEdit: onEdit
+        )
         .contextMenu {
-            Button(action: onEdit) {
-                Label("Edit Expense", systemImage: "pencil")
+            ExpenseContextMenu(
+                onEdit: onEdit,
+                onDelete: { isShowingDeleteConfirmation = true }
+            )
+        }
+        .swipeActions(edge: .trailing) {
+            Button("Delete", role: .destructive) {
+                isShowingDeleteConfirmation = true
+            }
+        }
+        .confirmationDialog(
+            "Delete Expense",
+            isPresented: $isShowingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                viewModel.deleteExpense(withId: expense.id)
             }
             
-            Button(role: .destructive, action: {
-                viewModel.deleteExpense(withId: expense.id)
-            }) {
-                Label("Delete Expense", systemImage: "trash")
-            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete this expense?")
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(expense.title), \(formatCurrency(expense.amount)), paid by \(payerName)")
+        .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("Double tap to edit expense")
     }
     
@@ -179,20 +177,130 @@ struct ExpenseRowView: View {
         viewModel.currentTrip ?? Trip(id: "", name: "", description: "", startDate: nil, endDate: nil, participants: [], expenses: [], inviteCode: "")
     }
     
-    /// Get the payer's name for accessibility
-    private var payerName: String {
-        if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
-            return payer.name
-        }
-        return "Unknown"
-    }
-    
     /// Format currency for accessibility labels
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencySymbol = expense.currencySymbol
         return formatter.string(from: NSNumber(value: amount)) ?? "\(expense.currencySymbol)\(amount)"
+    }
+    
+    /// Get the payer's name for accessibility
+    private var payerName: String {
+        if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
+            return payer.name
+        }
+        return expense.paidBy.name
+    }
+    
+    // Simplify complex accessibility label by pre-computing it
+    private var accessibilityDescription: String {
+        let title = expense.title
+        let amount = formatCurrency(expense.amount)
+        let payer = payerName
+        return "\(title), \(amount), paid by \(payer)"
+    }
+}
+
+// MARK: - Subviews for ExpenseRowView
+
+/// The main button content for an expense row
+struct ExpenseButton: View {
+    let expense: Expense
+    let trip: Trip
+    let dateFormatter: DateFormatter
+    let onEdit: () -> Void
+    
+    var body: some View {
+        Button(action: onEdit) {
+            HStack {
+                // Left side - expense details
+                ExpenseDetails(
+                    expense: expense,
+                    trip: trip, 
+                    dateFormatter: dateFormatter
+                )
+                
+                Spacer()
+                
+                // Right side - amount
+                CurrencyText(
+                    amount: expense.amount,
+                    symbol: expense.currencySymbol,
+                    color: .primary,
+                    font: .headline
+                )
+            }
+            .padding(12)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+/// The details part of an expense (left side of row)
+struct ExpenseDetails: View {
+    let expense: Expense
+    let trip: Trip
+    let dateFormatter: DateFormatter
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Title
+            Text(expense.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            // Payer info
+            PayerText(expense: expense, trip: trip)
+            
+            // Date
+            Text(dateFormatter.string(from: expense.date))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+/// Text showing who paid for an expense
+struct PayerText: View {
+    let expense: Expense
+    let trip: Trip
+    
+    var body: some View {
+        if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
+            Text("Paid by \(payer.name)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        } else {
+            Text("Paid by \(expense.paidBy.name)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+/// Context menu for expense actions
+struct ExpenseContextMenu: View {
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        Button {
+            onEdit()
+        } label: {
+            Label("Edit Expense", systemImage: "pencil")
+        }
+        
+        Divider()
+        
+        Button(role: .destructive) {
+            onDelete()
+        } label: {
+            Label("Delete", systemImage: "trash.fill")
+                .foregroundColor(.red)
+        }
     }
 }
 

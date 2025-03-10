@@ -454,6 +454,28 @@ class TripViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Trip Management
+    
+    // Delete a trip by ID
+    func deleteTrip(withId id: String) {
+        // Remove from local array first
+        trips.removeAll(where: { $0.id == id })
+        
+        // If the deleted trip was the current trip, clear the current trip
+        if currentTrip?.id == id {
+            currentTrip = nil
+        }
+        
+        // Delete from Firestore
+        FirebaseService.shared.deleteTrip(withId: id) { [weak self] error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.errorMessage = "Error deleting trip: \(error.localizedDescription)"
+            }
+        }
+    }
+    
     // MARK: - Balance Calculation
     
     func calculateDebts() -> [Debt] {

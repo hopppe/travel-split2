@@ -226,6 +226,8 @@ struct AddMenuButton: View {
 struct TripListContentView: View {
     @ObservedObject var viewModel: TripViewModel
     let onShareTrip: () -> Void
+    @State private var tripToDelete: Trip?
+    @State private var showingDeleteConfirmation = false
     
     var body: some View {
         List {
@@ -233,6 +235,12 @@ struct TripListContentView: View {
                 ForEach(viewModel.trips) { trip in
                     NavigationLink(destination: TripDetailView(viewModel: viewModel, trip: trip)) {
                         TripRowView(trip: trip)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button("Delete", role: .destructive) {
+                            tripToDelete = trip
+                            showingDeleteConfirmation = true
+                        }
                     }
                     .contextMenu {
                         Button(action: {
@@ -242,12 +250,40 @@ struct TripListContentView: View {
                         }) {
                             Label("Share Trip", systemImage: "square.and.arrow.up")
                         }
+                        
+                        Divider() // Visual separator
+                        
+                        Button(role: .destructive, action: {
+                            tripToDelete = trip
+                            showingDeleteConfirmation = true
+                        }) {
+                            Label("Delete Trip", systemImage: "trash.fill")
+                                .foregroundColor(.red)
+                        }
                     }
                     .accessibilityHint("Navigate to trip details")
                 }
             }
         }
         .listStyle(InsetGroupedListStyle())
+        .confirmationDialog(
+            "Delete Trip",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete for Everyone", role: .destructive) {
+                if let trip = tripToDelete {
+                    viewModel.deleteTrip(withId: trip.id)
+                    tripToDelete = nil
+                }
+            }
+            
+            Button("Cancel", role: .cancel) {
+                tripToDelete = nil
+            }
+        } message: {
+            Text("This will permanently delete the trip for all participants.")
+        }
     }
 }
 

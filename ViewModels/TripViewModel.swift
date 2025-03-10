@@ -99,6 +99,19 @@ class TripViewModel: ObservableObject {
         // In a real app, you would save to storage or server here
     }
     
+    /// Delete a trip by ID
+    func deleteTrip(withId id: String) {
+        // Remove the trip from the trips array
+        trips.removeAll(where: { $0.id == id })
+        
+        // If the deleted trip was the current trip, set currentTrip to nil
+        if currentTrip?.id == id {
+            currentTrip = nil
+        }
+        
+        // In a real app, you would delete from storage or server here
+    }
+    
     // MARK: - Expense Management
     
     func addExpenseToCurrentTrip(title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other) {

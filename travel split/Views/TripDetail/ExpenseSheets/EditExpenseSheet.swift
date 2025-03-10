@@ -148,6 +148,18 @@ struct EditExpenseSheet: View {
                 }
                 .disabled(!isFormValid())
             }
+            
+            ToolbarItem(placement: .bottomBar) {
+                Button(role: .destructive) {
+                    viewModel.deleteExpense(withId: expense.id)
+                    dismiss()
+                } label: {
+                    Label("Delete Expense", systemImage: "trash")
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
         }
         .sheet(isPresented: $showCurrencyPicker) {
             CurrencyPickerView(

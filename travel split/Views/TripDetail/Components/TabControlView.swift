@@ -61,6 +61,7 @@ struct TripActionsMenu: View {
     let onAddExpense: () -> Void
     let onAddParticipant: () -> Void
     let onShareTrip: () -> Void
+    let onDeleteTrip: () -> Void
     
     var body: some View {
         Menu {
@@ -77,6 +78,13 @@ struct TripActionsMenu: View {
             // Share trip action
             Button(action: onShareTrip) {
                 Label("Share Trip", systemImage: "square.and.arrow.up")
+            }
+            
+            Divider()
+            
+            // Delete trip action
+            Button(role: .destructive, action: onDeleteTrip) {
+                Label("Delete Trip", systemImage: "trash.fill")
             }
         } label: {
             Image(systemName: "ellipsis.circle")

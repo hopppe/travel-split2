@@ -14,6 +14,8 @@ struct TripDetailView: View {
     @State private var showingAddParticipantSheet = false
     @State private var selectedExpense: Expense?
     @State private var selectedTab = 0
+    @State private var showingDeleteConfirmation = false
+    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         VStack(spacing: 0) {
@@ -53,7 +55,8 @@ struct TripDetailView: View {
                 TripActionsMenu(
                     onAddExpense: { showingAddExpenseSheet = true },
                     onAddParticipant: { showingAddParticipantSheet = true },
-                    onShareTrip: shareTrip
+                    onShareTrip: shareTrip,
+                    onDeleteTrip: { showingDeleteConfirmation = true }
                 )
             }
         }
@@ -69,6 +72,21 @@ struct TripDetailView: View {
             NavigationStack {
                 EditExpenseSheet(viewModel: viewModel, expense: expense)
             }
+        }
+        .confirmationDialog(
+            "Delete Trip",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete for Everyone", role: .destructive) {
+                deleteTrip()
+            }
+            
+            Button("Cancel", role: .cancel) {
+                // Do nothing
+            }
+        } message: {
+            Text("This will permanently delete the trip for all participants.")
         }
     }
     
@@ -108,5 +126,11 @@ struct TripDetailView: View {
         formatter.numberStyle = .currency
         formatter.currencySymbol = "$" // Default to USD
         return formatter.string(from: NSNumber(value: amount)) ?? "$\(amount)"
+    }
+    
+    // Delete trip function
+    private func deleteTrip() {
+        viewModel.deleteTrip(withId: trip.id)
+        presentationMode.wrappedValue.dismiss()
     }
 } 

@@ -46,11 +46,11 @@ struct ParticipantRow: View {
                     Text(currencySymbol)
                         .foregroundColor(.secondary)
                     
-                    // Ultra-simple text field implementation
+                    // Modified TextField implementation for better UX
                     TextField("0", text: Binding(
                         get: { 
                             if isFocused {
-                                // When focused, always show empty field for easy entry
+                                // When focused, show empty field for easy entry
                                 return ""
                             } else {
                                 return amount == 0 ? "0" : String(format: "%.\(decimalPlaces)f", amount)
@@ -68,7 +68,13 @@ struct ParticipantRow: View {
                     .multilineTextAlignment(.trailing)
                     .frame(width: 70)
                     .onTapGesture {
+                        // Set focus state and clear the field
                         isFocused = true
+                        
+                        // Reset amount to zero when tapped
+                        if shouldClearOnEdit {
+                            onAmountChanged(0)
+                        }
                     }
                     .onSubmit {
                         isFocused = false

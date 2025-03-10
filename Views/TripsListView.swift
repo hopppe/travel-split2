@@ -7,6 +7,9 @@ struct TripsListView: View {
     @State private var newTripName = ""
     @State private var newTripDescription = ""
     @State private var joinTripCode = ""
+    @State private var tripToDelete: Trip?
+    @State private var showingDeleteConfirmation = false
+    @State private var isEditMode: EditMode = .inactive
     
     var body: some View {
         NavigationStack {
@@ -56,6 +59,12 @@ struct TripsListView: View {
                                 NavigationLink(destination: TripDetailView(viewModel: viewModel, trip: trip)) {
                                     TripRowView(trip: trip)
                                 }
+                                .swipeActions(edge: .trailing) {
+                                    Button("Delete", role: .destructive) {
+                                        tripToDelete = trip
+                                        showingDeleteConfirmation = true
+                                    }
+                                }
                                 .contextMenu {
                                     Button(action: {
                                         // Share trip link
@@ -64,15 +73,38 @@ struct TripsListView: View {
                                     }) {
                                         Label("Share Trip", systemImage: "square.and.arrow.up")
                                     }
+                                    
+                                    Divider() // Adds a visual separator
+                                    
+                                    Button(role: .destructive, action: {
+                                        tripToDelete = trip
+                                        showingDeleteConfirmation = true
+                                    }) {
+                                        Label("Delete Trip", systemImage: "trash.fill")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                            }
+                            .onDelete { indexSet in
+                                let tripsToDelete = indexSet.map { viewModel.trips[$0] }
+                                if let trip = tripsToDelete.first {
+                                    tripToDelete = trip
+                                    showingDeleteConfirmation = true
                                 }
                             }
                         }
                     }
-                    .listStyle(InsetGroupedListStyle())
+                    .listStyle(PlainListStyle())
+                    .environment(\.editMode, $isEditMode)
                 }
             }
             .navigationTitle("Travel Split")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                        .disabled(viewModel.trips.isEmpty)
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: {
@@ -113,6 +145,24 @@ struct TripsListView: View {
                     message: Text(item.message),
                     dismissButton: .default(Text("OK"))
                 )
+            }
+            .confirmationDialog(
+                "Delete Trip",
+                isPresented: $showingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete for Everyone", role: .destructive) {
+                    if let trip = tripToDelete {
+                        viewModel.deleteTrip(withId: trip.id)
+                        tripToDelete = nil
+                    }
+                }
+                
+                Button("Cancel", role: .cancel) {
+                    tripToDelete = nil
+                }
+            } message: {
+                Text("This will permanently delete the trip for all participants.")
             }
         }
     }

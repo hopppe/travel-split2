@@ -6,6 +6,8 @@ struct TripDetailView: View {
     @State private var showingAddExpenseSheet = false
     @State private var showingAddParticipantSheet = false
     @State private var selectedTab = 0
+    @State private var showingDeleteConfirmation = false
+    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         VStack(spacing: 0) {
@@ -63,6 +65,15 @@ struct TripDetailView: View {
                     }) {
                         Label("Share Trip", systemImage: "square.and.arrow.up")
                     }
+                    
+                    Divider()
+                    
+                    // Delete trip action
+                    Button(role: .destructive, action: {
+                        showingDeleteConfirmation = true
+                    }) {
+                        Label("Delete Trip", systemImage: "trash.fill")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -73,6 +84,21 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingAddParticipantSheet) {
             AddParticipantSheet(viewModel: viewModel, isPresented: $showingAddParticipantSheet)
+        }
+        .confirmationDialog(
+            "Delete Trip",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete for Everyone", role: .destructive) {
+                deleteTrip()
+            }
+            
+            Button("Cancel", role: .cancel) {
+                // Do nothing
+            }
+        } message: {
+            Text("This will permanently delete the trip for all participants.")
         }
     }
     
@@ -92,6 +118,11 @@ struct TripDetailView: View {
            let rootViewController = windowScene.windows.first?.rootViewController {
             rootViewController.present(activityVC, animated: true)
         }
+    }
+    
+    private func deleteTrip() {
+        viewModel.deleteTrip(withId: trip.id)
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
@@ -128,6 +159,7 @@ struct ExpensesListView: View {
     @ObservedObject var viewModel: TripViewModel
     let trip: Trip
     @State private var showingAddExpenseSheet = false
+    @State private var isEditMode: EditMode = .inactive
     
     var body: some View {
         ZStack {
@@ -172,19 +204,48 @@ struct ExpensesListView: View {
                     ForEach(groupedExpenses.keys.sorted(by: >), id: \.self) { date in
                         Section(header: Text(formatDate(date))) {
                             ForEach(groupedExpenses[date] ?? []) { expense in
-                                ExpenseRowView(expense: expense)
-                                    .contextMenu {
-                                        Button(role: .destructive, action: {
-                                            viewModel.deleteExpense(withId: expense.id)
-                                        }) {
-                                            Label("Delete", systemImage: "trash")
-                                        }
+                                NavigationLink {
+                                    EditExpenseSheet(viewModel: viewModel, expense: expense)
+                                } label: {
+                                    ExpenseRowView(expense: expense)
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button("Delete", role: .destructive) {
+                                        viewModel.deleteExpense(withId: expense.id)
                                     }
+                                }
+                                .contextMenu {
+                                    Button("Edit", action: {
+                                        // Navigation handled automatically by NavigationLink
+                                    }) {
+                                        Label("Edit Expense", systemImage: "pencil")
+                                    }
+                                    
+                                    Button(role: .destructive, action: {
+                                        viewModel.deleteExpense(withId: expense.id)
+                                    }) {
+                                        Label("Delete Expense", systemImage: "trash")
+                                    }
+                                }
+                            }
+                            .onDelete { indexSet in
+                                let expensesToDelete = indexSet.map { groupedExpenses[date]![$0] }
+                                for expense in expensesToDelete {
+                                    viewModel.deleteExpense(withId: expense.id)
+                                }
                             }
                         }
                     }
                 }
-                .listStyle(InsetGroupedListStyle())
+                .listStyle(PlainListStyle())
+                .environment(\.editMode, $isEditMode)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        if !trip.expenses.isEmpty {
+                            EditButton()
+                        }
+                    }
+                }
                 
                 // Floating action button
                 VStack {
