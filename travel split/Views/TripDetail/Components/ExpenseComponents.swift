@@ -93,7 +93,7 @@ struct ParticipantRow: View {
 
 // MARK: - Currency Picker View
 /// A reusable currency picker view
-struct CurrencyPickerView: View {
+struct ExpenseCurrencyPickerView: View {
     @Binding var currencySymbol: String
     @Binding var isPresented: Bool
     let options: [String]

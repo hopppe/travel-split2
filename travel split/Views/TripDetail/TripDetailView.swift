@@ -12,6 +12,7 @@ struct TripDetailView: View {
     let trip: Trip
     @State private var showingAddExpenseSheet = false
     @State private var showingAddParticipantSheet = false
+    @State private var showingCurrencyPicker = false
     @State private var selectedExpense: Expense?
     @State private var selectedTab = 0
     @State private var showingDeleteConfirmation = false
@@ -56,6 +57,7 @@ struct TripDetailView: View {
                     onAddExpense: { showingAddExpenseSheet = true },
                     onAddParticipant: { showingAddParticipantSheet = true },
                     onShareTrip: shareTrip,
+                    onChangeCurrency: { showingCurrencyPicker = true },
                     onDeleteTrip: { showingDeleteConfirmation = true }
                 )
             }
@@ -72,6 +74,9 @@ struct TripDetailView: View {
             NavigationStack {
                 EditExpenseSheet(viewModel: viewModel, expense: expense)
             }
+        }
+        .sheet(isPresented: $showingCurrencyPicker) {
+            CurrencyCodePickerSheet(viewModel: viewModel, isPresented: $showingCurrencyPicker)
         }
         .confirmationDialog(
             "Delete Trip",

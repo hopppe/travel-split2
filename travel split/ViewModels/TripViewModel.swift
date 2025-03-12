@@ -486,6 +486,46 @@ class TripViewModel: ObservableObject {
         return trip.calculateDebts()
     }
     
+    // MARK: - Currency Management
+    
+    // Update the base currency for the trip
+    func updateBaseCurrency(to currencyCode: String) {
+        guard var trip = currentTrip else {
+            errorMessage = "No trip selected"
+            return
+        }
+        
+        // Update the base currency
+        trip.baseCurrencyCode = currencyCode
+        
+        // Update trip in array locally
+        if let tripIndex = trips.firstIndex(where: { $0.id == trip.id }) {
+            trips[tripIndex] = trip
+            currentTrip = trip
+        }
+        
+        // Save updated trip to Firestore
+        isLoading = true
+        FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            if let error = error {
+                self.errorMessage = "Error updating base currency: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    // Get the current base currency code
+    func getBaseCurrencyCode() -> String {
+        return currentTrip?.baseCurrencyCode ?? "USD"
+    }
+    
+    // Get the current base currency symbol
+    func getBaseCurrencySymbol() -> String {
+        return currentTrip?.baseCurrencySymbol ?? "$"
+    }
+    
     // MARK: - Participant Management
     
     // Add the current user to a trip
@@ -767,4 +807,4 @@ class TripViewModel: ObservableObject {
 enum SplitType {
     case equal
     case custom
-} 
+}

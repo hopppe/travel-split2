@@ -45,6 +45,7 @@ struct Trip: Identifiable, Codable {
     var participants: [User]
     var expenses: [Expense]
     var inviteCode: String // Shareable code for inviting others
+    var baseCurrencyCode: String // Base currency for balance calculations
     
     // For creating a new trip
     static func create(name: String, description: String, creator: User) -> Trip {
@@ -56,8 +57,31 @@ struct Trip: Identifiable, Codable {
             endDate: nil,
             participants: [creator],
             expenses: [],
-            inviteCode: String(UUID().uuidString.prefix(8)) // Create shortened invite code
+            inviteCode: String(UUID().uuidString.prefix(8)), // Create shortened invite code
+            baseCurrencyCode: "USD" // Default to USD
         )
+    }
+    
+    // Computed property for base currency symbol
+    var baseCurrencySymbol: String {
+        let symbols = [
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            "JPY": "¥",
+            "CAD": "C$",
+            "AUD": "A$",
+            "INR": "₹",
+            "RUB": "₽",
+            "KRW": "₩",
+            "HKD": "HK$",
+            "PHP": "₱",
+            "TRY": "₺",
+            "UAH": "₴",
+            "NGN": "₦",
+            "ZAR": "R"
+        ]
+        return symbols[baseCurrencyCode] ?? "$"
     }
     
     // Calculate what each person owes to each other
@@ -72,12 +96,27 @@ struct Trip: Identifiable, Codable {
         
         // Calculate what each person has paid and what they owe
         for expense in expenses {
+            let expenseCurrency = expense.currencyCode ?? "USD"
+            
+            // Convert expense amount to base currency
+            let convertedAmount = CurrencyConverterService.shared.convert(
+                amount: expense.amount,
+                from: expenseCurrency,
+                to: baseCurrencyCode
+            )
+            
             // Add the amount to the payer
-            balances[expense.paidBy.id, default: 0] += expense.amount
+            balances[expense.paidBy.id, default: 0] += convertedAmount
             
             // Subtract the amount from each participant based on their share
             for share in expense.shares {
-                balances[share.user.id, default: 0] -= share.amount
+                // Convert share amount to base currency
+                let convertedShareAmount = CurrencyConverterService.shared.convert(
+                    amount: share.amount,
+                    from: expenseCurrency,
+                    to: baseCurrencyCode
+                )
+                balances[share.user.id, default: 0] -= convertedShareAmount
             }
         }
         

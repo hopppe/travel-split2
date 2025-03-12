@@ -162,7 +162,7 @@ struct EditExpenseSheet: View {
             }
         }
         .sheet(isPresented: $showCurrencyPicker) {
-            CurrencyPickerView(
+            ExpenseCurrencyPickerView(
                 currencySymbol: $currencySymbol,
                 isPresented: $showCurrencyPicker,
                 options: currencyOptions

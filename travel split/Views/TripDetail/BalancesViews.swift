@@ -33,6 +33,31 @@ struct BalancesView: View {
     }
 }
 
+// MARK: - Currency Picker Sheet
+
+/// Sheet for selecting the base currency
+struct CurrencyCodePickerSheet: View {
+    @ObservedObject var viewModel: TripViewModel
+    @Binding var isPresented: Bool
+    @State private var selectedCurrencyCode: String
+    
+    init(viewModel: TripViewModel, isPresented: Binding<Bool>) {
+        self.viewModel = viewModel
+        self._isPresented = isPresented
+        self._selectedCurrencyCode = State(initialValue: viewModel.getBaseCurrencyCode())
+    }
+    
+    var body: some View {
+        CurrencyCodePickerView(
+            currencyCode: $selectedCurrencyCode,
+            isPresented: $isPresented,
+            onCurrencySelected: { code in
+                viewModel.updateBaseCurrency(to: code)
+            }
+        )
+    }
+}
+
 // MARK: - State Views
 
 /// View shown when all participants are settled (no debts)
@@ -97,13 +122,15 @@ struct BalancesContentView: View {
                     UserBalanceRow(
                         user: currentUserInTrip,
                         balance: calculateUserBalance(for: currentUserInTrip.id),
-                        isCurrentUser: true
+                        isCurrentUser: true,
+                        currencySymbol: trip.baseCurrencySymbol
                     )
                 } else {
                     UserBalanceRow(
                         user: viewModel.currentUser,
                         balance: calculateUserBalance(for: viewModel.currentUser.id),
-                        isCurrentUser: true
+                        isCurrentUser: true,
+                        currencySymbol: trip.baseCurrencySymbol
                     )
                 }
             }
@@ -111,13 +138,24 @@ struct BalancesContentView: View {
             // Debts section
             Section(header: Text("Who Owes What")) {
                 ForEach(debts, id: \.id) { debt in
-                    DebtRowView(debt: debt)
+                    DebtRowView(debt: debt, currencySymbol: trip.baseCurrencySymbol)
                 }
             }
             
             // Summary section
             Section(header: Text("Summary")) {
-                TotalSummaryView(trip: trip)
+                TotalSummaryView(trip: trip, currencySymbol: trip.baseCurrencySymbol)
+            }
+            
+            // Info section
+            Section {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.secondary)
+                    Text("All amounts shown in \(trip.baseCurrencyCode)")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .listStyle(InsetGroupedListStyle())
@@ -148,6 +186,7 @@ struct UserBalanceRow: View {
     let user: User
     let balance: Double
     let isCurrentUser: Bool
+    let currencySymbol: String
     
     var body: some View {
         HStack {
@@ -209,14 +248,15 @@ struct UserBalanceRow: View {
     private var formattedBalance: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$"
-        return formatter.string(from: NSNumber(value: abs(balance))) ?? "$0.00"
+        formatter.currencySymbol = currencySymbol
+        return formatter.string(from: NSNumber(value: abs(balance))) ?? "\(currencySymbol)0.00"
     }
 }
 
 /// Row displaying a debt between two users
 struct DebtRowView: View {
     let debt: Debt
+    let currencySymbol: String
     
     var body: some View {
         HStack {
@@ -253,14 +293,15 @@ struct DebtRowView: View {
     private var formattedAmount: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$"
-        return formatter.string(from: NSNumber(value: debt.amount)) ?? String(format: "$%.2f", debt.amount)
+        formatter.currencySymbol = currencySymbol
+        return formatter.string(from: NSNumber(value: debt.amount)) ?? "\(currencySymbol)\(debt.amount)"
     }
 }
 
 /// Summary view showing trip totals
 struct TotalSummaryView: View {
     let trip: Trip
+    let currencySymbol: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -293,21 +334,29 @@ struct TotalSummaryView: View {
     private var formattedTotalCost: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$"
-        return formatter.string(from: NSNumber(value: totalTripCost())) ?? String(format: "$%.2f", totalTripCost())
+        formatter.currencySymbol = currencySymbol
+        return formatter.string(from: NSNumber(value: totalTripCost())) ?? "\(currencySymbol)\(totalTripCost())"
     }
     
     /// Formatted average cost per person
     private var formattedAveragePerPerson: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$"
-        return formatter.string(from: NSNumber(value: averagePerPerson())) ?? String(format: "$%.2f", averagePerPerson())
+        formatter.currencySymbol = currencySymbol
+        return formatter.string(from: NSNumber(value: averagePerPerson())) ?? "\(currencySymbol)\(averagePerPerson())"
     }
     
-    /// Calculate total trip cost
+    /// Calculate total trip cost (all converted to base currency)
     private func totalTripCost() -> Double {
-        trip.expenses.reduce(0) { $0 + $1.amount }
+        trip.expenses.reduce(0) { total, expense in
+            let expenseCurrency = expense.currencyCode ?? "USD"
+            let convertedAmount = CurrencyConverterService.shared.convert(
+                amount: expense.amount,
+                from: expenseCurrency,
+                to: trip.baseCurrencyCode
+            )
+            return total + convertedAmount
+        }
     }
     
     /// Calculate average cost per person
@@ -315,5 +364,48 @@ struct TotalSummaryView: View {
         let total = totalTripCost()
         let count = trip.participants.count
         return count > 0 ? total / Double(count) : 0
+    }
+}
+
+// MARK: - Preview Provider
+struct BalancesView_Previews: PreviewProvider {
+    static var previews: some View {
+        // Create mock data
+        let user = User(id: "1", name: "John", email: "john@example.com", isClaimed: true, claimedByUserId: "1")
+        let user2 = User(id: "2", name: "Alice", email: "alice@example.com", isClaimed: true, claimedByUserId: "2")
+        let expense1 = Expense.createEqual(
+            title: "Dinner", 
+            amount: 100.0, 
+            paidBy: user, 
+            participants: [user, user2],
+            currencyCode: "USD"
+        )
+        let expense2 = Expense.createEqual(
+            title: "Taxi", 
+            amount: 50.0, 
+            paidBy: user2, 
+            participants: [user, user2],
+            currencyCode: "EUR"
+        )
+        let trip = Trip(
+            id: "1",
+            name: "Weekend Trip",
+            description: "A fun weekend",
+            startDate: nil,
+            endDate: nil,
+            participants: [user, user2],
+            expenses: [expense1, expense2],
+            inviteCode: "12345678",
+            baseCurrencyCode: "USD"
+        )
+        
+        // Create view model with mock data
+        let viewModel = TripViewModel(currentUser: user)
+        viewModel.trips = [trip]
+        viewModel.currentTrip = trip
+        
+        return NavigationView {
+            BalancesView(viewModel: viewModel)
+        }
     }
 } 

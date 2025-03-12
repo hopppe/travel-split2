@@ -174,7 +174,7 @@ struct ExpenseRowView: View {
     
     /// Get the current trip from view model
     private var trip: Trip {
-        viewModel.currentTrip ?? Trip(id: "", name: "", description: "", startDate: nil, endDate: nil, participants: [], expenses: [], inviteCode: "")
+        viewModel.currentTrip ?? Trip(id: "", name: "", description: "", startDate: nil, endDate: nil, participants: [], expenses: [], inviteCode: "", baseCurrencyCode: "USD")
     }
     
     /// Format currency for accessibility labels

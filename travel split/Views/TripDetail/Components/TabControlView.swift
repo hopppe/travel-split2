@@ -61,6 +61,7 @@ struct TripActionsMenu: View {
     let onAddExpense: () -> Void
     let onAddParticipant: () -> Void
     let onShareTrip: () -> Void
+    let onChangeCurrency: () -> Void
     let onDeleteTrip: () -> Void
     
     var body: some View {
@@ -78,6 +79,11 @@ struct TripActionsMenu: View {
             // Share trip action
             Button(action: onShareTrip) {
                 Label("Share Trip", systemImage: "square.and.arrow.up")
+            }
+            
+            // Change currency action
+            Button(action: onChangeCurrency) {
+                Label("Change Currency", systemImage: "dollarsign.circle.fill")
             }
             
             Divider()
