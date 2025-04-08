@@ -107,12 +107,20 @@ struct AddParticipantSheet: View {
                                 .keyboardType(.emailAddress)
                                 .autocapitalization(.none)
                                 .padding(.vertical, 4)
-                            
-                            if participants.count > 1 && index < participants.count - 1 {
-                                Divider()
-                                    .padding(.vertical, 4)
-                            }
                         }
+                        .padding(.bottom, 8)
+                        .overlay(
+                            // Only add bottom border if not the last item
+                            Group {
+                                if index < participants.count - 1 {
+                                    Rectangle()
+                                        .frame(height: 0.5)
+                                        .foregroundColor(Color.gray.opacity(0.3))
+                                        .offset(y: 12)
+                                }
+                            }
+                            , alignment: .bottom
+                        )
                     }
                     
                     Button(action: {
