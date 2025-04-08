@@ -801,6 +801,165 @@ class TripViewModel: ObservableObject {
         // Return all participants that are not claimed
         return trip.participants.filter { !$0.isClaimed }
     }
+    
+    // MARK: - Auto-join Trip from Deep Link
+    
+    // Add new method to get previous participants
+    func getPreviousParticipants() -> [User] {
+        var allParticipants: [User] = []
+        var uniqueParticipantIds = Set<String>()
+        
+        // Collect participants from all trips, excluding the current user
+        for trip in trips {
+            let otherParticipants = trip.participants.filter { $0.id != currentUser.id }
+            
+            for participant in otherParticipants {
+                // Only add participants that haven't been added yet
+                if !uniqueParticipantIds.contains(participant.id) {
+                    uniqueParticipantIds.insert(participant.id)
+                    allParticipants.append(participant)
+                }
+            }
+        }
+        
+        // Sort by most recently added (assuming trips are in chronological order)
+        // and limit to 12 participants max
+        let sortedParticipants = allParticipants.reversed()
+        return Array(sortedParticipants.prefix(12))
+    }
+    
+    /// Automatically join a trip with the given invite code without showing the join sheet
+    /// Returns a tuple of (success, errorMessage)
+    func autoJoinTrip(withInviteCode code: String, completion: @escaping (Bool) -> Void) {
+        isLoading = true
+        self.errorMessage = nil
+        
+        // Check if we already have this trip locally
+        if let existingTrip = trips.first(where: { $0.inviteCode == code }) {
+            // Already a member of this trip
+            if existingTrip.participants.contains(where: { $0.id == currentUser.id }) {
+                // We're already in this trip - select it and return success
+                self.currentTrip = existingTrip
+                self.isLoading = false
+                completion(true)
+                return
+            }
+            
+            // Check for unclaimed participants that could be claimed
+            let unclaimedParticipants = getUnclaimedParticipants(in: existingTrip)
+            
+            if !unclaimedParticipants.isEmpty {
+                // We have unclaimed participants - show the claim view 
+                potentialClaimableParticipants = unclaimedParticipants
+                showParticipantClaimingView = true
+                isLoading = false
+                currentTrip = existingTrip
+                // Return false because we need user input for claiming
+                completion(false)
+                return
+            }
+            
+            // No unclaimed participants - add self to the trip locally
+            var updatedTrip = existingTrip
+            updatedTrip.participants.append(currentUser)
+            
+            // Save the updated trip to Firestore
+            FirebaseService.shared.saveTrip(updatedTrip) { [weak self] success, error in
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                if let error = error {
+                    self.errorMessage = "Error joining trip: \(error.localizedDescription)"
+                    completion(false)
+                    return
+                }
+                
+                if success {
+                    if let index = self.trips.firstIndex(where: { $0.id == updatedTrip.id }) {
+                        self.trips[index] = updatedTrip
+                    }
+                    self.currentTrip = updatedTrip
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+            return
+        }
+        
+        // Fetch trip from Firestore
+        FirebaseService.shared.fetchTrip(withInviteCode: code) { [weak self] trip, error in
+            guard let self = self else { return }
+            self.isLoading = false
+            
+            if let error = error {
+                self.errorMessage = "Error finding trip: \(error.localizedDescription)"
+                completion(false)
+                return
+            }
+            
+            guard var trip = trip else {
+                self.errorMessage = "Invalid invite code or trip not found"
+                completion(false)
+                return
+            }
+            
+            // Check if already a participant
+            if trip.participants.contains(where: { $0.id == self.currentUser.id }) {
+                // We're already in this trip - select it and return success
+                self.currentTrip = trip
+                
+                // Add trip to local trips array if not already there
+                if !self.trips.contains(where: { $0.id == trip.id }) {
+                    self.trips.append(trip)
+                }
+                
+                completion(true)
+                return
+            }
+            
+            // Check for unclaimed participants that could be claimed
+            let unclaimedParticipants = self.getUnclaimedParticipants(in: trip)
+            
+            if !unclaimedParticipants.isEmpty {
+                // We have unclaimed participants - show the claim view 
+                self.potentialClaimableParticipants = unclaimedParticipants
+                self.showParticipantClaimingView = true
+                self.currentTrip = trip
+                
+                // Add trip to local trips array if not already there
+                if !self.trips.contains(where: { $0.id == trip.id }) {
+                    self.trips.append(trip)
+                }
+                
+                completion(false)
+                return
+            }
+            
+            // No unclaimed participants - add self to trip
+            trip.participants.append(self.currentUser)
+            
+            // Save updated trip to Firestore
+            FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    self.errorMessage = "Error joining trip: \(error.localizedDescription)"
+                    completion(false)
+                    return
+                }
+                
+                if success {
+                    self.trips.append(trip)
+                    self.currentTrip = trip
+                    self.setupTripListener(for: trip.id)
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }
+    }
 }
 
 // Types of expense splits

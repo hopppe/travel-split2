@@ -8,15 +8,95 @@
 import SwiftUI
 import Foundation
 
+// Local struct for participant entry
+struct AddParticipantEntry: Identifiable {
+    var id = UUID()
+    var name: String = ""
+    var email: String = ""
+}
+
+// Local view for displaying a previous participant
+struct AddPreviousParticipantView: View {
+    let participant: User
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    // Avatar circle
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.2))
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Text(participant.name.prefix(1).uppercased())
+                                .font(.headline)
+                                .foregroundColor(.accentColor)
+                        )
+                    
+                    // Selection indicator
+                    if isSelected {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 20, height: 20)
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 5, y: 5)
+                    }
+                }
+                
+                Text(participant.name)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 60)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(participant.name)\(isSelected ? ", selected" : "")")
+        .accessibilityHint(isSelected ? "Double tap to remove" : "Double tap to add")
+    }
+}
+
 struct AddParticipantSheet: View {
     @ObservedObject var viewModel: TripViewModel
     @Environment(\.dismiss) var dismiss
     
-    @State private var participants: [ParticipantEntry] = [ParticipantEntry()]
+    @State private var participants: [AddParticipantEntry] = [AddParticipantEntry()]
+    @State private var previousParticipants: [User] = []
+    @State private var selectedPreviousParticipants = Set<String>()
     
     var body: some View {
         NavigationStack {
             Form {
+                // Previous participants suggestions
+                if !previousParticipants.isEmpty {
+                    Section(header: Text("Previous Participants")) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(previousParticipants) { participant in
+                                    AddPreviousParticipantView(
+                                        participant: participant,
+                                        isSelected: selectedPreviousParticipants.contains(participant.id),
+                                        onTap: {
+                                            toggleParticipantSelection(participant)
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        .padding(.horizontal, -16) // Extend beyond section edges
+                    }
+                }
+                
                 Section(header: Text("Add Participants")) {
                     ForEach(0..<participants.count, id: \.self) { index in
                         VStack(spacing: 12) {
@@ -36,7 +116,7 @@ struct AddParticipantSheet: View {
                     }
                     
                     Button(action: {
-                        participants.append(ParticipantEntry())
+                        participants.append(AddParticipantEntry())
                     }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
@@ -64,12 +144,35 @@ struct AddParticipantSheet: View {
                     .disabled(!isFormValid)
                 }
             }
+            .onAppear {
+                // Load previous participants when the view appears
+                previousParticipants = viewModel.getPreviousParticipants()
+            }
         }
     }
     
     // Form validation
     private var isFormValid: Bool {
         !participants.isEmpty && participants.allSatisfy { !$0.name.isEmpty }
+    }
+    
+    // Toggle the selection of a previous participant
+    private func toggleParticipantSelection(_ participant: User) {
+        if selectedPreviousParticipants.contains(participant.id) {
+            selectedPreviousParticipants.remove(participant.id)
+            
+            // Remove from the participants list if they were added
+            participants.removeAll { entry in
+                // Match by name since we don't have the ID in AddParticipantEntry
+                return entry.name == participant.name && entry.email == participant.email
+            }
+        } else {
+            selectedPreviousParticipants.insert(participant.id)
+            
+            // Add to the participants list
+            let entry = AddParticipantEntry(name: participant.name, email: participant.email)
+            participants.append(entry)
+        }
     }
     
     // Save the participants

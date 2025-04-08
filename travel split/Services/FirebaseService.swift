@@ -17,6 +17,10 @@ class FirebaseService {
     @Published var isAuthenticated = false
     private var userId: String?
     
+    // App bundle identifiers for deep linking
+    private let iosBundleId = "com.ethanhoppe.travel-split"
+    private let androidPackageName = "com.ethanhoppe.travelsplit" // Update this if you have an Android version
+    
     private init() {
         // Firebase is now configured in AppDelegate
         print("Firebase Service initialized")
@@ -199,14 +203,40 @@ class FirebaseService {
         }
     }
     
-    // Generate a shareable link/message for the invite code
+    // MARK: - Deep Linking
+    
+    /// Create a deep link using direct URL scheme for development testing
+    func createDeepLink(inviteCode: String) -> URL {
+        // Create a direct URL scheme link for testing
+        let directURL = "travelsplit://join?code=\(inviteCode)"
+        print("Development direct URL for testing: \(directURL)")
+        return URL(string: directURL)!
+        
+        /* DYNALINKS IMPLEMENTATION (UNCOMMENT WHEN APP IS PUBLISHED)
+        
+        // Create a deep link URL that contains the invite code
+        let deepLink = "https://travelsplit.app/join?code=\(inviteCode)"
+        
+        // Create the Dynalinks URL - this format works without registering
+        // Format: https://{subdomain}.dynalinks.com/?link={deep_link}&ibi={ios_bundle_id}&apn={android_package_name}
+        let encodedDeepLink = deepLink.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? deepLink
+        let dynalinkURL = "https://travelsplit.dynalinks.com/?link=\(encodedDeepLink)&ibi=\(iosBundleId)&apn=\(androidPackageName)"
+        
+        print("Generated Dynalink: \(dynalinkURL)")
+        return URL(string: dynalinkURL)!
+        */
+    }
+    
+    // Generate a shareable message for the invite code
     func generateShareMessage(inviteCode: String, tripName: String) -> String {
+        // Create a deep link
+        let deepLinkURL = createDeepLink(inviteCode: inviteCode)
+        
         return """
         Join my trip "\(tripName)" in Travel Split!
         
-        Use invite code: \(inviteCode)
-        
-        Download the app and enter this code to join.
+        Link: \(deepLinkURL)
+        Code: \(inviteCode)
         """
     }
     

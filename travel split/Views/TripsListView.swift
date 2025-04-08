@@ -112,24 +112,19 @@ struct TripsListView: View {
     private func shareTrip() {
         guard let trip = viewModel.currentTrip else { return }
         
-        let shareLink = viewModel.generateShareLink()
+        // Get the deep link URL from FirebaseService
+        let deepLinkURL = FirebaseService.shared.createDeepLink(inviteCode: trip.inviteCode)
         
-        // Create a more detailed share message
+        // Create a simple share message with just the essentials
         let shareMessage = """
         Join my trip '\(trip.name)' in Travel Split!
         
-        • \(trip.participants.count) participants
-        • \(trip.expenses.count) expenses
-        • Total: \(formatCurrency(trip.expenses.reduce(0) { $0 + $1.amount }))
-        
-        Use this link to join and view details:
+        Link: \(deepLinkURL)
+        Code: \(trip.inviteCode)
         """
         
         let activityVC = UIActivityViewController(
-            activityItems: [
-                shareMessage,
-                shareLink
-            ],
+            activityItems: [shareMessage],
             applicationActivities: nil
         )
         
@@ -337,6 +332,63 @@ struct TripRowView: View {
 
 // MARK: - Sheet Views
 
+/// Struct to manage participant entry data
+struct TripParticipantEntry: Identifiable {
+    var id = UUID()
+    var name: String = ""
+    var email: String = ""
+}
+
+/// View for displaying and selecting a previous participant
+struct TripPreviousParticipantView: View {
+    let participant: User
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    // Avatar circle
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.2))
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Text(participant.name.prefix(1).uppercased())
+                                .font(.headline)
+                                .foregroundColor(.accentColor)
+                        )
+                    
+                    // Selection indicator
+                    if isSelected {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 20, height: 20)
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 5, y: 5)
+                    }
+                }
+                
+                Text(participant.name)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 60)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(participant.name)\(isSelected ? ", selected" : "")")
+        .accessibilityHint(isSelected ? "Double tap to remove" : "Double tap to add")
+    }
+}
+
 /// Sheet for creating a new trip
 struct NewTripSheet: View {
     @ObservedObject var viewModel: TripViewModel
@@ -344,8 +396,10 @@ struct NewTripSheet: View {
     @Binding var tripName: String
     @Binding var tripDescription: String
     
-    @State private var participants: [ParticipantEntry] = []
+    @State private var participants: [TripParticipantEntry] = []
     @State private var showingParticipantsSection = false
+    @State private var previousParticipants: [User] = []
+    @State private var selectedPreviousParticipants = Set<String>()
     
     var body: some View {
         NavigationStack {
@@ -364,8 +418,10 @@ struct NewTripSheet: View {
                         if !showingParticipantsSection {
                             // Add one empty participant entry when toggling on
                             if participants.isEmpty {
-                                participants = [ParticipantEntry()]
+                                participants = [TripParticipantEntry()]
                             }
+                            // Load previous participants
+                            previousParticipants = viewModel.getPreviousParticipants()
                             showingParticipantsSection = true
                         } else {
                             showingParticipantsSection = false
@@ -384,7 +440,28 @@ struct NewTripSheet: View {
                 }
                 
                 if showingParticipantsSection {
-                    Section(header: Text("Participants")) {
+                    // Previous participants suggestions
+                    if !previousParticipants.isEmpty {
+                        Section(header: Text("Previous Participants")) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(previousParticipants) { participant in
+                                        TripPreviousParticipantView(
+                                            participant: participant,
+                                            isSelected: selectedPreviousParticipants.contains(participant.id),
+                                            onTap: {
+                                                toggleParticipantSelection(participant)
+                                            }
+                                        )
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            .padding(.horizontal, -16) // Extend beyond section edges
+                        }
+                    }
+                    
+                    Section(header: Text("Add Participants")) {
                         ForEach(0..<participants.count, id: \.self) { index in
                             VStack(spacing: 12) {
                                 TextField("Name", text: $participants[index].name)
@@ -403,7 +480,7 @@ struct NewTripSheet: View {
                         }
                         
                         Button(action: {
-                            participants.append(ParticipantEntry())
+                            participants.append(TripParticipantEntry())
                         }) {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
@@ -448,6 +525,25 @@ struct NewTripSheet: View {
         !tripName.isEmpty && (!showingParticipantsSection || participants.allSatisfy { !$0.name.isEmpty })
     }
     
+    // Toggle the selection of a previous participant
+    private func toggleParticipantSelection(_ participant: User) {
+        if selectedPreviousParticipants.contains(participant.id) {
+            selectedPreviousParticipants.remove(participant.id)
+            
+            // Remove from the participants list if they were added
+            participants.removeAll { entry in
+                // Match by name since we don't have the ID in TripParticipantEntry
+                return entry.name == participant.name && entry.email == participant.email
+            }
+        } else {
+            selectedPreviousParticipants.insert(participant.id)
+            
+            // Add to the participants list
+            let entry = TripParticipantEntry(name: participant.name, email: participant.email)
+            participants.append(entry)
+        }
+    }
+    
     /// Creates a new trip with the entered details
     private func createTrip() {
         // Process participants if section is shown
@@ -478,6 +574,7 @@ struct NewTripSheet: View {
         tripDescription = ""
         participants = []
         showingParticipantsSection = false
+        selectedPreviousParticipants.removeAll()
         isPresented = false
     }
 }

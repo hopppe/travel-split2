@@ -81,14 +81,55 @@ struct TravelSplitApp: App {
     
     // Handle incoming URLs 
     private func handleIncomingURL(_ url: URL) {
-        // Extract code from URL - we won't use Dynamic Links now
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let queryItems = components.queryItems,
-           let codeItem = queryItems.first(where: { $0.name == "code" }),
-           let inviteCode = codeItem.value {
+        print("Received URL in app: \(url)")
+        
+        // Extract invite code from URL components
+        var extractedInviteCode: String? = nil
+        
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+            // Check for invite code in query parameters
+            if let codeItem = components.queryItems?.first(where: { $0.name == "code" }),
+               let inviteCode = codeItem.value {
+                print("Found invite code in query parameters: \(inviteCode)")
+                extractedInviteCode = inviteCode
+            }
             
-            selectedInviteCode = inviteCode
-            showJoinTripSheet = true
+            // Check for invite code in path components
+            if extractedInviteCode == nil {
+                let pathComponents = components.path.components(separatedBy: "/")
+                if pathComponents.count >= 2 && 
+                   (pathComponents[1] == "join" || pathComponents[1] == "invite") && 
+                   pathComponents.count >= 3 {
+                    let inviteCode = pathComponents[2]
+                    print("Found invite code in path: \(inviteCode)")
+                    extractedInviteCode = inviteCode
+                }
+            }
+        }
+        
+        guard let inviteCode = extractedInviteCode else {
+            print("Could not parse invite code from URL: \(url)")
+            return
+        }
+        
+        // Auto-join the trip instead of showing the join sheet
+        tripViewModel.autoJoinTrip(withInviteCode: inviteCode) { success in
+            if !success {
+                // Check if we need to show the claim sheet instead of the join sheet
+                if self.tripViewModel.showParticipantClaimingView {
+                    // The claim sheet will be automatically shown via the onChange handler
+                    // Just set the invite code in case needed
+                    DispatchQueue.main.async {
+                        self.selectedInviteCode = inviteCode
+                    }
+                } else {
+                    // If auto-join failed for other reasons, show the join sheet
+                    DispatchQueue.main.async {
+                        self.selectedInviteCode = inviteCode
+                        self.showJoinTripSheet = true
+                    }
+                }
+            }
         }
     }
     

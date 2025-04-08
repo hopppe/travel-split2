@@ -97,24 +97,19 @@ struct TripDetailView: View {
     
     // Share trip function with improved context
     private func shareTrip() {
-        let shareLink = viewModel.generateShareLink()
+        // Get the deep link URL from FirebaseService
+        let deepLinkURL = FirebaseService.shared.createDeepLink(inviteCode: trip.inviteCode)
         
-        // Create a more detailed share message
+        // Create a simple share message with just the essentials
         let shareMessage = """
         Join my trip '\(trip.name)' in Travel Split!
         
-        • \(trip.participants.count) participants
-        • \(trip.expenses.count) expenses
-        • Total: \(formatCurrency(trip.expenses.reduce(0) { $0 + $1.amount }))
-        
-        Use this link to join and view details:
+        Link: \(deepLinkURL)
+        Code: \(trip.inviteCode)
         """
         
         let activityVC = UIActivityViewController(
-            activityItems: [
-                shareMessage,
-                shareLink
-            ],
+            activityItems: [shareMessage],
             applicationActivities: nil
         )
         
