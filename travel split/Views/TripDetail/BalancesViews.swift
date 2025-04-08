@@ -123,14 +123,16 @@ struct BalancesContentView: View {
                         user: currentUserInTrip,
                         balance: calculateUserBalance(for: currentUserInTrip.id),
                         isCurrentUser: true,
-                        currencySymbol: trip.baseCurrencySymbol
+                        currencySymbol: trip.baseCurrencySymbol,
+                        viewModel: viewModel
                     )
                 } else {
                     UserBalanceRow(
                         user: viewModel.currentUser,
                         balance: calculateUserBalance(for: viewModel.currentUser.id),
                         isCurrentUser: true,
-                        currencySymbol: trip.baseCurrencySymbol
+                        currencySymbol: trip.baseCurrencySymbol,
+                        viewModel: viewModel
                     )
                 }
             }
@@ -138,7 +140,11 @@ struct BalancesContentView: View {
             // Debts section
             Section(header: Text("Who Owes What")) {
                 ForEach(debts, id: \.id) { debt in
-                    DebtRowView(debt: debt, currencySymbol: trip.baseCurrencySymbol)
+                    DebtRowView(
+                        debt: debt,
+                        currencySymbol: trip.baseCurrencySymbol,
+                        viewModel: viewModel
+                    )
                 }
             }
             
@@ -187,6 +193,8 @@ struct UserBalanceRow: View {
     let balance: Double
     let isCurrentUser: Bool
     let currencySymbol: String
+    @ObservedObject var viewModel: TripViewModel
+    @State private var showBreakdown = false
     
     var body: some View {
         HStack {
@@ -218,8 +226,28 @@ struct UserBalanceRow: View {
                 .foregroundColor(balanceColor)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle()) // Make entire row tappable
+        .onTapGesture {
+            // Get the first user debt if there is one, otherwise don't show the sheet
+            if getFirstUserDebt() != nil {
+                showBreakdown = true
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(isCurrentUser ? "You" : user.name) \(balanceDescription) \(formattedBalance)")
+        .accessibilityHint("Tap to see balance breakdown")
+        .sheet(isPresented: $showBreakdown) {
+            if let debt = getFirstUserDebt() {
+                NavigationStack {
+                    BalanceBreakdownSheet(
+                        viewModel: viewModel,
+                        isPresented: $showBreakdown,
+                        debt: debt
+                    )
+                }
+                .presentationDetents([.large])
+            }
+        }
     }
     
     /// Description of the balance (owes, receives, settled)
@@ -251,12 +279,49 @@ struct UserBalanceRow: View {
         formatter.currencySymbol = currencySymbol
         return formatter.string(from: NSNumber(value: abs(balance))) ?? "\(currencySymbol)0.00"
     }
+    
+    /// Get the first debt related to this user
+    private func getFirstUserDebt() -> Debt? {
+        let debts = viewModel.calculateDebts()
+        
+        // First try to find a debt involving this user
+        if let debt = debts.first(where: { $0.from.id == user.id || $0.to.id == user.id }) {
+            return debt
+        }
+        
+        // If no debt found but user has a non-zero balance, create a synthetic debt
+        // representing their balance with another participant
+        if balance != 0, let trip = viewModel.currentTrip, trip.participants.count > 1 {
+            // Find another participant to represent the debt with
+            if let otherParticipant = trip.participants.first(where: { $0.id != user.id }) {
+                if balance < 0 {
+                    // User owes money to someone else
+                    return Debt(
+                        from: user,
+                        to: otherParticipant,
+                        amount: abs(balance)
+                    )
+                } else {
+                    // User is owed money by someone else
+                    return Debt(
+                        from: otherParticipant,
+                        to: user,
+                        amount: abs(balance)
+                    )
+                }
+            }
+        }
+        
+        return nil
+    }
 }
 
 /// Row displaying a debt between two users
 struct DebtRowView: View {
     let debt: Debt
     let currencySymbol: String
+    @ObservedObject var viewModel: TripViewModel
+    @State private var showBreakdown = false
     
     var body: some View {
         HStack {
@@ -285,8 +350,23 @@ struct DebtRowView: View {
                 .foregroundColor(.primary)
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle()) // Make entire row tappable
+        .onTapGesture {
+            showBreakdown = true
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(debt.from.name) owes \(debt.to.name) \(formattedAmount)")
+        .accessibilityHint("Tap to see breakdown")
+        .sheet(isPresented: $showBreakdown) {
+            NavigationStack {
+                BalanceBreakdownSheet(
+                    viewModel: viewModel,
+                    isPresented: $showBreakdown,
+                    debt: debt
+                )
+            }
+            .presentationDetents([.large])
+        }
     }
     
     /// Formatted currency amount
