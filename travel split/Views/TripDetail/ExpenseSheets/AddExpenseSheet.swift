@@ -22,7 +22,7 @@ struct AddExpenseSheet: View {
     @State private var showCurrencyPicker = false
     
     // Currency options
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R"]
+    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼"]
     
     var body: some View {
         Form {
@@ -320,7 +320,8 @@ struct AddExpenseSheet: View {
             "₺": "TRY",
             "₴": "UAH",
             "₦": "NGN",
-            "R": "ZAR"
+            "R": "ZAR",
+            "﷼": "SAR"
         ]
         
         return currencyCodes[symbol] ?? "USD"

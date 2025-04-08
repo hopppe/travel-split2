@@ -37,7 +37,8 @@ class CurrencyConverterService {
         "TRY": 8.5,      // Turkish Lira
         "UAH": 27.0,     // Ukrainian Hryvnia
         "NGN": 410.0,    // Nigerian Naira
-        "ZAR": 14.5      // South African Rand
+        "ZAR": 14.5,     // South African Rand
+        "SAR": 3.75      // Saudi Riyal
     ]
     
     // Convert amount from one currency to another
@@ -74,7 +75,8 @@ class CurrencyConverterService {
             "TRY": "₺",
             "UAH": "₴",
             "NGN": "₦",
-            "ZAR": "R"
+            "ZAR": "R",
+            "SAR": "﷼"
         ]
         
         return exchangeRates.keys.sorted().map { code in

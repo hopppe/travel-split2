@@ -228,7 +228,11 @@ struct ExpenseButton: View {
                     amount: expense.amount,
                     symbol: expense.currencySymbol,
                     color: .primary,
-                    font: .headline
+                    font: .headline,
+                    showBaseConversion: true,
+                    expenseCurrency: expense.currencyCode ?? "USD",
+                    baseCurrency: trip.baseCurrencyCode,
+                    baseSymbol: trip.baseCurrencySymbol
                 )
             }
             .padding(12)

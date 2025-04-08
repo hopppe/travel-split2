@@ -14,18 +14,57 @@ struct CurrencyText: View {
     let symbol: String
     let color: Color
     let font: Font
+    var showBaseConversion: Bool = false
+    var expenseCurrency: String? = nil
+    var baseCurrency: String? = nil
+    var baseSymbol: String? = nil
     
-    init(amount: Double, symbol: String = "$", color: Color = .primary, font: Font = .body) {
+    init(
+        amount: Double, 
+        symbol: String = "$", 
+        color: Color = .primary, 
+        font: Font = .body,
+        showBaseConversion: Bool = false,
+        expenseCurrency: String? = nil,
+        baseCurrency: String? = nil,
+        baseSymbol: String? = nil
+    ) {
         self.amount = amount
         self.symbol = symbol
         self.color = color
         self.font = font
+        self.showBaseConversion = showBaseConversion
+        self.expenseCurrency = expenseCurrency
+        self.baseCurrency = baseCurrency
+        self.baseSymbol = baseSymbol
     }
     
     var body: some View {
-        Text("\(symbol)\(String(format: "%.2f", amount))")
-            .foregroundColor(color)
-            .font(font)
+        Group {
+            if showBaseConversion && expenseCurrency != nil && baseCurrency != nil && baseSymbol != nil && expenseCurrency != baseCurrency {
+                // Show original amount and conversion
+                let convertedAmount = CurrencyConverterService.shared.convert(
+                    amount: amount,
+                    from: expenseCurrency!,
+                    to: baseCurrency!
+                )
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(symbol)\(String(format: "%.2f", amount))")
+                        .foregroundColor(color)
+                        .font(font)
+                    
+                    Text("(\(baseSymbol!)\(String(format: "%.2f", convertedAmount)))")
+                        .foregroundColor(color.opacity(0.7))
+                        .font(.caption)
+                }
+            } else {
+                // Just show original amount
+                Text("\(symbol)\(String(format: "%.2f", amount))")
+                    .foregroundColor(color)
+                    .font(font)
+            }
+        }
     }
 }
 
@@ -163,6 +202,7 @@ struct ExpenseCardView: View {
     let expense: Expense
     let participants: [User]
     let onTap: () -> Void
+    let trip: Trip
     
     private var payer: User? {
         participants.first { $0.id == expense.paidBy.id }
@@ -188,8 +228,12 @@ struct ExpenseCardView: View {
                     
                     CurrencyText(
                         amount: expense.amount,
-                        symbol: "$",
-                        font: .headline
+                        symbol: expense.currencySymbol,
+                        font: .headline,
+                        showBaseConversion: true,
+                        expenseCurrency: expense.currencyCode ?? "USD",
+                        baseCurrency: trip.baseCurrencyCode,
+                        baseSymbol: trip.baseCurrencySymbol
                     )
                 }
                 
@@ -230,5 +274,8 @@ enum ExpenseSplitType {
 
 // Format currency with the given symbol
 func formatCurrency(_ amount: Double, symbol: String = "$") -> String {
-    return "\(symbol)\(String(format: "%.2f", amount))"
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .currency
+    formatter.currencySymbol = symbol
+    return formatter.string(from: NSNumber(value: amount)) ?? "\(symbol)\(String(format: "%.2f", amount))"
 } 

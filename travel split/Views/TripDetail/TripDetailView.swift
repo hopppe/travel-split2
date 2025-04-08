@@ -79,7 +79,7 @@ struct TripDetailView: View {
             CurrencyCodePickerSheet(viewModel: viewModel, isPresented: $showingCurrencyPicker)
         }
         .confirmationDialog(
-            "Delete Trip",
+            "Delete Group",
             isPresented: $showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
@@ -91,7 +91,7 @@ struct TripDetailView: View {
                 // Do nothing
             }
         } message: {
-            Text("This will permanently delete the trip for all participants.")
+            Text("This will permanently delete the group for all participants.")
         }
     }
     
@@ -102,7 +102,7 @@ struct TripDetailView: View {
         
         // Create a simple share message with just the essentials
         let shareMessage = """
-        Join my trip '\(trip.name)' in Travel Split!
+        Join my group '\(trip.name)' in Travel Split!
         
         Link: \(deepLinkURL)
         Code: \(trip.inviteCode)
@@ -124,8 +124,8 @@ struct TripDetailView: View {
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$" // Default to USD
-        return formatter.string(from: NSNumber(value: amount)) ?? "$\(amount)"
+        formatter.currencySymbol = trip.baseCurrencySymbol
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(trip.baseCurrencySymbol)\(amount)"
     }
     
     // Delete trip function

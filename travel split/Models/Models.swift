@@ -79,7 +79,8 @@ struct Trip: Identifiable, Codable {
             "TRY": "₺",
             "UAH": "₴",
             "NGN": "₦",
-            "ZAR": "R"
+            "ZAR": "R",
+            "SAR": "﷼"
         ]
         return symbols[baseCurrencyCode] ?? "$"
     }
@@ -163,7 +164,18 @@ struct Expense: Identifiable, Codable {
             "EUR": "€",
             "GBP": "£",
             "JPY": "¥",
-            "CAD": "C$"
+            "CAD": "C$",
+            "AUD": "A$",
+            "INR": "₹",
+            "RUB": "₽",
+            "KRW": "₩",
+            "HKD": "HK$",
+            "PHP": "₱",
+            "TRY": "₺",
+            "UAH": "₴",
+            "NGN": "₦",
+            "ZAR": "R",
+            "SAR": "﷼"
         ]
         return symbols[currencyCode ?? "USD"] ?? "$"
     }

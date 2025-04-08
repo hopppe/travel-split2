@@ -42,7 +42,7 @@ struct TripsListView: View {
                     )
                 }
             }
-            .navigationTitle("Travel Split")
+            .navigationTitle("Groups")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
@@ -117,7 +117,7 @@ struct TripsListView: View {
         
         // Create a simple share message with just the essentials
         let shareMessage = """
-        Join my trip '\(trip.name)' in Travel Split!
+        Join my group '\(trip.name)' in Travel Split!
         
         Link: \(deepLinkURL)
         Code: \(trip.inviteCode)
@@ -139,8 +139,12 @@ struct TripsListView: View {
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$" // Default to USD
-        return formatter.string(from: NSNumber(value: amount)) ?? "$\(amount)"
+        
+        // Use the current trip's currency symbol if available, otherwise default to USD
+        let currencySymbol = viewModel.currentTrip?.baseCurrencySymbol ?? "$"
+        formatter.currencySymbol = currencySymbol
+        
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(currencySymbol)\(amount)"
     }
 }
 
@@ -166,18 +170,18 @@ struct EmptyTripsView: View {
                 .foregroundColor(.accentColor)
                 .accessibilityHidden(true)
             
-            Text("No Trips Yet")
+            Text("No Groups Yet")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Create a new trip to start tracking expenses with friends")
+            Text("Create a new group to start tracking expenses with friends")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
             
             Button(action: onCreateTripTapped) {
-                Label("Create New Trip", systemImage: "plus.circle.fill")
+                Label("Create New Group", systemImage: "plus.circle.fill")
                     .font(.headline)
                     .padding()
                     .frame(maxWidth: .infinity)
@@ -187,8 +191,8 @@ struct EmptyTripsView: View {
             }
             .padding(.horizontal, 40)
             .padding(.top, 10)
-            .accessibilityLabel("Create new trip")
-            .accessibilityHint("Creates a new trip to track expenses")
+            .accessibilityLabel("Create new group")
+            .accessibilityHint("Creates a new group to track expenses")
         }
         .padding()
     }
@@ -204,11 +208,11 @@ struct AddMenuButton: View {
     var body: some View {
         Menu {
             Button(action: onCreateTripTapped) {
-                Label("Create New Trip", systemImage: "plus")
+                Label("Create New Group", systemImage: "plus")
             }
             
             Button(action: onJoinTripTapped) {
-                Label("Join Trip", systemImage: "person.badge.plus")
+                Label("Join Group", systemImage: "person.badge.plus")
             }
         } label: {
             Image(systemName: "plus")
@@ -226,7 +230,7 @@ struct TripListContentView: View {
     
     var body: some View {
         List {
-            Section(header: Text("Your Trips")) {
+            Section(header: Text("Your Groups")) {
                 ForEach(viewModel.trips) { trip in
                     NavigationLink(destination: TripDetailView(viewModel: viewModel, trip: trip)) {
                         TripRowView(trip: trip)
@@ -243,7 +247,7 @@ struct TripListContentView: View {
                             viewModel.selectTrip(trip)
                             onShareTrip()
                         }) {
-                            Label("Share Trip", systemImage: "square.and.arrow.up")
+                            Label("Share Group", systemImage: "square.and.arrow.up")
                         }
                         
                         Divider() // Visual separator
@@ -252,7 +256,7 @@ struct TripListContentView: View {
                             tripToDelete = trip
                             showingDeleteConfirmation = true
                         }) {
-                            Label("Delete Trip", systemImage: "trash.fill")
+                            Label("Delete Group", systemImage: "trash.fill")
                                 .foregroundColor(.red)
                         }
                     }
@@ -262,7 +266,7 @@ struct TripListContentView: View {
         }
         .listStyle(InsetGroupedListStyle())
         .confirmationDialog(
-            "Delete Trip",
+            "Delete Group",
             isPresented: $showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
@@ -277,7 +281,7 @@ struct TripListContentView: View {
                 tripToDelete = nil
             }
         } message: {
-            Text("This will permanently delete the trip for all participants.")
+            Text("This will permanently delete the group for all participants.")
         }
     }
 }
@@ -304,7 +308,7 @@ struct TripRowView: View {
                 Spacer()
                 
                 if !trip.expenses.isEmpty {
-                    Text("$\(getTotalAmount(), specifier: "%.2f")")
+                    Text("\(trip.baseCurrencySymbol)\(getTotalAmount(), specifier: "%.2f")")
                         .font(.subheadline.bold())
                         .foregroundColor(.primary)
                         .accessibilityLabel("Total \(formatCurrency(getTotalAmount()))")
@@ -313,20 +317,28 @@ struct TripRowView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Trip: \(trip.name), \(trip.participants.count) participants, \(trip.expenses.isEmpty ? "No expenses" : "Total \(formatCurrency(getTotalAmount()))")")
+        .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) participants, \(trip.expenses.isEmpty ? "No expenses" : "Total \(formatCurrency(getTotalAmount()))")")
     }
     
     /// Calculate the total amount for the trip
     private func getTotalAmount() -> Double {
-        trip.expenses.reduce(0) { $0 + $1.amount }
+        return trip.expenses.reduce(0) { total, expense in
+            let expenseCurrency = expense.currencyCode ?? "USD"
+            let convertedAmount = CurrencyConverterService.shared.convert(
+                amount: expense.amount,
+                from: expenseCurrency, 
+                to: trip.baseCurrencyCode
+            )
+            return total + convertedAmount
+        }
     }
     
     /// Format currency for accessibility labels
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencySymbol = "$" // Default to USD
-        return formatter.string(from: NSNumber(value: amount)) ?? "$\(amount)"
+        formatter.currencySymbol = trip.baseCurrencySymbol
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(trip.baseCurrencySymbol)\(amount)"
     }
 }
 
@@ -404,12 +416,12 @@ struct NewTripSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Trip Details")) {
-                    TextField("Trip Name", text: $tripName)
-                        .accessibilityLabel("Trip name")
+                Section(header: Text("Group Details")) {
+                    TextField("Group Name", text: $tripName)
+                        .accessibilityLabel("Group name")
                     
                     TextField("Description (Optional)", text: $tripDescription)
-                        .accessibilityLabel("Trip description")
+                        .accessibilityLabel("Group description")
                 }
                 
                 // Participants section that can be toggled
@@ -503,13 +515,13 @@ struct NewTripSheet: View {
                 
                 Section {
                     Text(showingParticipantsSection 
-                         ? "Add participants now or you can add them later after creating the trip."
-                         : "Enter details for your new trip. You can add participants and expenses after creating the trip.")
+                         ? "Add participants now or you can add them later after creating the group."
+                         : "Enter details for your new group. You can add participants and expenses after creating the group.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .navigationTitle("New Trip")
+            .navigationTitle("New Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -600,16 +612,16 @@ struct JoinTripSheet: View {
                     TextField("Invite Code", text: $inviteCode)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .accessibilityLabel("Trip invite code")
+                        .accessibilityLabel("Group invite code")
                 }
                 
                 Section {
-                    Text("Enter the code shared with you to join an existing trip. This code is found in the trip's share menu.")
+                    Text("Enter the code shared with you to join an existing group. This code is found in the group's share menu.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .navigationTitle("Join Trip")
+            .navigationTitle("Join Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

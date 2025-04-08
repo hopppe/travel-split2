@@ -98,21 +98,84 @@ struct ExpenseCurrencyPickerView: View {
     @Binding var isPresented: Bool
     let options: [String]
     
+    // Currency option with symbol and code
+    private struct CurrencyOption: Identifiable {
+        let symbol: String
+        let code: String
+        let name: String
+        var id: String { symbol }
+        
+        var displayText: String {
+            "\(symbol) - \(code)"
+        }
+    }
+    
+    // Map currency symbols to codes and names
+    private var currencyOptions: [CurrencyOption] {
+        let currencyCodes = [
+            "$": "USD",
+            "€": "EUR",
+            "£": "GBP",
+            "¥": "JPY",
+            "₹": "INR",
+            "₽": "RUB",
+            "₩": "KRW",
+            "A$": "AUD",
+            "C$": "CAD",
+            "HK$": "HKD",
+            "₱": "PHP",
+            "₺": "TRY",
+            "₴": "UAH",
+            "₦": "NGN",
+            "R": "ZAR",
+            "﷼": "SAR"
+        ]
+        
+        let currencyNames = [
+            "USD": "US Dollar",
+            "EUR": "Euro",
+            "GBP": "British Pound",
+            "JPY": "Japanese Yen",
+            "INR": "Indian Rupee",
+            "RUB": "Russian Ruble",
+            "KRW": "Korean Won",
+            "AUD": "Australian Dollar",
+            "CAD": "Canadian Dollar",
+            "HKD": "Hong Kong Dollar",
+            "PHP": "Philippine Peso",
+            "TRY": "Turkish Lira",
+            "UAH": "Ukrainian Hryvnia",
+            "NGN": "Nigerian Naira",
+            "ZAR": "South African Rand",
+            "SAR": "Saudi Riyal"
+        ]
+        
+        return options.compactMap { symbol in
+            guard let code = currencyCodes[symbol] else { return nil }
+            let name = currencyNames[code] ?? code
+            return CurrencyOption(symbol: symbol, code: code, name: name)
+        }.sorted { $0.code < $1.code }
+    }
+    
     var body: some View {
         NavigationStack {
             List {
-                ForEach(options, id: \.self) { currency in
+                ForEach(currencyOptions) { option in
                     Button(action: {
-                        currencySymbol = currency
+                        currencySymbol = option.symbol
                         isPresented = false
                     }) {
                         HStack {
-                            Text(currency)
+                            Text(option.symbol)
                                 .font(.title2)
+                                .frame(width: 50, alignment: .leading)
+                            
+                            Text(option.name)
+                                .font(.headline)
                             
                             Spacer()
                             
-                            if currency == currencySymbol {
+                            if option.symbol == currencySymbol {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(.accentColor)
                             }

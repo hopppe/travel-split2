@@ -24,7 +24,7 @@ struct ParticipantsView: View {
             VStack {
                 List {
                     // People section
-                    Section(header: Text("People on this trip")) {
+                    Section(header: Text("People in this group")) {
                         ForEach(trip.participants) { participant in
                             ParticipantRowView(
                                 participant: participant,
@@ -46,9 +46,9 @@ struct ParticipantsView: View {
                                         .foregroundColor(.primary)
                                 }
                             }
-                            .accessibilityHint("Share trip to let others claim placeholder participants")
+                            .accessibilityHint("Share group to let others claim placeholder participants")
                         } footer: { 
-                            Text("You have \(unclaimedParticipantCount) unclaimed placeholder \(unclaimedParticipantCount == 1 ? "participant" : "participants"). Share the trip link so others can join and claim these participants.")
+                            Text("You have \(unclaimedParticipantCount) unclaimed placeholder \(unclaimedParticipantCount == 1 ? "participant" : "participants"). Share the group link so others can join and claim these participants.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -64,7 +64,7 @@ struct ParticipantsView: View {
                                     .foregroundColor(.primary)
                             }
                         }
-                        .accessibilityHint("Add a new participant to this trip")
+                        .accessibilityHint("Add a new participant to this group")
                     } footer: {
                         Text("Tip: You can add placeholder participants that others can claim when they join.")
                             .font(.caption)
@@ -116,7 +116,7 @@ struct ParticipantsView: View {
         let shareLink = viewModel.generateShareLink()
         
         let shareMessage = """
-        Join our trip '\(trip.name)' in Travel Split!
+        Join our group '\(trip.name)' in Travel Split!
         
         • \(trip.participants.count) participants (\(unclaimedParticipantCount) unclaimed)
         • \(trip.expenses.count) expenses
@@ -214,7 +214,7 @@ struct ShareTripSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                Text("Invite friends to join this trip")
+                Text("Invite friends to join this group")
                     .font(.headline)
                     .multilineTextAlignment(.center)
                 
@@ -224,7 +224,7 @@ struct ShareTripSheet: View {
                         .foregroundColor(.accentColor)
                         .accessibilityHidden(true)
                     
-                    Text("Share Trip Invite")
+                    Text("Share Group Invite")
                         .font(.title3)
                         .fontWeight(.semibold)
                         .accessibilityAddTraits(.isHeader)
@@ -261,7 +261,7 @@ struct ShareTripSheet: View {
                 Spacer()
             }
             .padding(.top, 24)
-            .navigationTitle("Share Trip")
+            .navigationTitle("Share Group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

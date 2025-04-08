@@ -78,7 +78,7 @@ struct TripActionsMenu: View {
             
             // Share trip action
             Button(action: onShareTrip) {
-                Label("Share Trip", systemImage: "square.and.arrow.up")
+                Label("Share Group", systemImage: "square.and.arrow.up")
             }
             
             // Change currency action
@@ -90,7 +90,7 @@ struct TripActionsMenu: View {
             
             // Delete trip action
             Button(role: .destructive, action: onDeleteTrip) {
-                Label("Delete Trip", systemImage: "trash.fill")
+                Label("Delete Group", systemImage: "trash.fill")
             }
         } label: {
             Image(systemName: "ellipsis.circle")
