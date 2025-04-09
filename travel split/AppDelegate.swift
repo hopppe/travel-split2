@@ -13,6 +13,9 @@ import FirebaseCore
 /// App delegate for Firebase and other SDK initialization
 /// This is required because SwiftUI lifecycle doesn't have a traditional app delegate
 class AppDelegate: NSObject, UIApplicationDelegate {
+    // Property to store the URL that launched the app
+    var launchURL: URL?
+    
     /// Configure Firebase when the app launches
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -23,6 +26,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         // Check if app was launched from a URL (deep link)
         if let url = launchOptions?[.url] as? URL {
+            // Store the launch URL for later use
+            self.launchURL = url
             handleDeepLink(url)
         }
         
@@ -37,6 +42,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
            let incomingURL = userActivity.webpageURL {
             print("Received Universal Link: \(incomingURL)")
             
+            // Store the URL
+            self.launchURL = incomingURL
+            
             // Handle the URL directly
             handleDeepLink(incomingURL)
             return true
@@ -49,16 +57,21 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                      open url: URL, 
                      options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         print("App opened with URL scheme: \(url)")
+        
+        // Store the URL
+        self.launchURL = url
+        
         handleDeepLink(url)
         return true
     }
     
-    /// Handle a deep link by passing it to the SwiftUI layer via the scene's onOpenURL handler
+    /// Handle a deep link by storing it for the SwiftUI app to use
     private func handleDeepLink(_ url: URL) {
-        print("Processing deep link: \(url)")
-        DispatchQueue.main.async {
-            // Use UIApplication.shared.open to trigger the onOpenURL handler in the SwiftUI app
-            UIApplication.shared.open(url)
-        }
+        print("Processing deep link in AppDelegate: \(url)")
+        // Store the URL for access by the SwiftUI app
+        self.launchURL = url
+        
+        // We don't need to call UIApplication.shared.open() anymore
+        // The app will retrieve the URL from launchURL
     }
 } 

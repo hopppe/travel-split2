@@ -9,19 +9,20 @@ struct WelcomeView: View {
     @State private var showNameInput = false
     @State private var userName = ""
     @State private var isNameValid = false
+    @State private var isLoading = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 32) {
                 // App logo/icon and title
                 VStack(spacing: 16) {
-                    Image(systemName: "airplane.circle.fill")
+                    Image(systemName: "person.3.fill")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100)
                         .foregroundColor(.indigo)
                     
-                    Text("Travel Split")
+                    Text("Free Split")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                 }
@@ -29,7 +30,7 @@ struct WelcomeView: View {
                 
                 // Welcome message
                 VStack(spacing: 12) {
-                    Text("Split travel expenses")
+                    Text("Split group expenses")
                         .font(.title2)
                         .fontWeight(.semibold)
                     
@@ -74,21 +75,57 @@ struct WelcomeView: View {
                                 }
                             
                             Button {
-                                if isNameValid {
-                                    // Update the user's name
-                                    tripViewModel.currentUser.name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
-                                    hasCompletedSetup = true
+                                if isNameValid && !isLoading {
+                                    // Show loading indicator
+                                    isLoading = true
+                                    
+                                    // Explicitly create an anonymous account
+                                    FirebaseService.shared.signInAnonymously { success, error in
+                                        isLoading = false
+                                        
+                                        if success {
+                                            print("Successfully created anonymous account")
+                                            // Update the user's name
+                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            
+                                            // Save to UserDefaults to ensure persistence
+                                            UserDefaults.standard.set(userName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "user_name")
+                                            
+                                            // Complete setup and transition to main UI
+                                            hasCompletedSetup = true
+                                        } else {
+                                            print("Failed to create anonymous account: \(error?.localizedDescription ?? "unknown error")")
+                                            // Proceed anyway with local user
+                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            
+                                            // Save to UserDefaults to ensure persistence
+                                            UserDefaults.standard.set(userName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "user_name")
+                                            
+                                            // Complete setup and transition to main UI
+                                            hasCompletedSetup = true
+                                        }
+                                    }
                                 }
                             } label: {
-                                Text("Continue")
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(isNameValid ? Color.indigo : Color.gray)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.indigo)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                } else {
+                                    Text("Continue")
+                                        .font(.headline)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(isNameValid ? Color.indigo : Color.gray)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                }
                             }
-                            .disabled(!isNameValid)
+                            .disabled(!isNameValid || isLoading)
                         }
                     }
                     
@@ -123,11 +160,11 @@ struct WelcomeView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 40)
             }
-            .navigationDestination(isPresented: $showSignIn) {
-                SignInView()
+            .sheet(isPresented: $showSignIn) {
+                SignInView(hasCompletedSetup: $hasCompletedSetup)
             }
-            .navigationDestination(isPresented: $showSignUp) {
-                SignUpView()
+            .sheet(isPresented: $showSignUp) {
+                SignUpView(hasCompletedSetup: $hasCompletedSetup)
             }
         }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 struct UserProfileView: View {
     @Environment(\.dismiss) private var dismiss
@@ -10,9 +11,11 @@ struct UserProfileView: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showSignOutConfirmation = false
     @State private var showSignIn = false
     @State private var showSignUp = false
     @State private var isInitialSetup: Bool
+    @State private var isAnonymousUser = true
     
     init(tripViewModel: TripViewModel, isInitialSetup: Bool = false) {
         self.tripViewModel = tripViewModel
@@ -27,18 +30,29 @@ struct UserProfileView: View {
                         .textContentType(.name)
                         .autocapitalization(.words)
                     
-                    // Only show email field if user is authenticated
-                    if authService.isAuthenticated {
+                    if !isAnonymousUser {
                         TextField("Email", text: $userEmail)
                             .textContentType(.emailAddress)
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
-                            .disabled(authService.isAuthenticated)
+                            .disabled(true)
+                    }
+                    
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Button(action: saveProfile) {
+                            Text(isAnonymousUser ? "Save Name" : "Update Profile")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .disabled(userName.isEmpty || isLoading)
                     }
                 }
                 
-                if !authService.isAuthenticated {
-                    Section {
+                if isAnonymousUser {
+                    Section(header: Text("Account")) {
                         Button("Sign In") {
                             showSignIn = true
                         }
@@ -48,27 +62,14 @@ struct UserProfileView: View {
                         }
                     }
                 } else {
-                    Section {
-                        Button(action: saveProfile) {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                            } else {
-                                Text("Save Profile")
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                        .disabled(userName.isEmpty || isLoading)
-                    }
-                    
-                    Section {
+                    Section(header: Text("Account Settings")) {
                         Button("Sign Out", role: .destructive) {
-                            authService.signOut()
+                            showSignOutConfirmation = true
                         }
                     }
                 }
             }
-            .navigationTitle(isInitialSetup ? "Welcome to Travel Split" : "Edit Profile")
+            .navigationTitle(isInitialSetup ? "Welcome to Free Split" : "Edit Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if !isInitialSetup {
@@ -80,23 +81,66 @@ struct UserProfileView: View {
                 }
             }
             .sheet(isPresented: $showSignIn) {
-                SignInView()
+                SignInView(hasCompletedSetup: .constant(true))
             }
             .sheet(isPresented: $showSignUp) {
-                SignUpView()
+                SignUpView(hasCompletedSetup: .constant(true))
             }
             .onAppear {
-                // Pre-fill fields with current values
-                userName = tripViewModel.currentUser.name
-                userEmail = tripViewModel.currentUser.email
+                refreshUserState()
             }
             .alert("Error", isPresented: $showError) {
-                Button("OK") { }
+                Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
             }
+            .alert("Sign Out Confirmation", isPresented: $showSignOutConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Sign Out", role: .destructive) {
+                    performSignOut()
+                }
+            } message: {
+                Text("Are you sure you want to sign out?")
+            }
             .interactiveDismissDisabled(isInitialSetup)
         }
+    }
+    
+    private func refreshUserState() {
+        if let firebaseUser = Auth.auth().currentUser {
+            isAnonymousUser = firebaseUser.isAnonymous
+            
+            if let email = firebaseUser.email, !email.isEmpty {
+                userEmail = email
+                
+                if let displayName = firebaseUser.displayName, !displayName.isEmpty {
+                    userName = displayName
+                } else {
+                    userName = tripViewModel.currentUser.name
+                }
+            } else {
+                isAnonymousUser = true
+                userName = tripViewModel.currentUser.name
+                userEmail = ""
+            }
+        } else {
+            isAnonymousUser = true
+            userName = tripViewModel.currentUser.name
+            userEmail = tripViewModel.currentUser.email
+        }
+        
+        print("Profile refreshed: name=\(userName), email=\(userEmail), anonymous=\(isAnonymousUser)")
+    }
+    
+    private func performSignOut() {
+        // Allow anonymous auth for future sessions if needed
+        UserDefaults.standard.set(true, forKey: "allowAnonymousAuth")
+        
+        // Set hasCompletedSetup to false to show welcome screen
+        UserDefaults.standard.set(false, forKey: "hasCompletedSetup")
+        
+        // Perform the actual sign out
+        authService.signOut()
     }
     
     private func saveProfile() {
@@ -104,17 +148,34 @@ struct UserProfileView: View {
         
         isLoading = true
         
-        // Update the user in the trip view model
-        let updatedUser = User(id: authService.currentUser?.id ?? UUID().uuidString,
-                             name: userName,
-                             email: userEmail,
-                             profileImage: nil,
-                             isClaimed: true)
+        if !isAnonymousUser, let currentUser = Auth.auth().currentUser {
+            let changeRequest = currentUser.createProfileChangeRequest()
+            changeRequest.displayName = userName
+            changeRequest.commitChanges { [self] error in
+                if let error = error {
+                    print("Error updating Firebase profile: \(error.localizedDescription)")
+                    self.errorMessage = "Failed to update profile: \(error.localizedDescription)"
+                    self.showError = true
+                    self.isLoading = false
+                    return
+                }
+                
+                self.updateLocalUserProfile()
+            }
+        } else {
+            updateLocalUserProfile()
+        }
+    }
+    
+    private func updateLocalUserProfile() {
+        var updatedUser = tripViewModel.currentUser
+        updatedUser.name = userName
+        updatedUser.email = userEmail
         
-        // Update the user in the view model
-        tripViewModel.updateUser(updatedUser)
+        tripViewModel.updateCurrentUser(updatedUser)
         
-        // Save to UserDefaults
+        tripViewModel.userManager.updateUser(updatedUser)
+        
         UserDefaults.standard.set(userName, forKey: "user_name")
         UserDefaults.standard.set(userEmail, forKey: "user_email")
         UserDefaults.standard.set(updatedUser.id, forKey: "user_id")

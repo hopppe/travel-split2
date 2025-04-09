@@ -19,6 +19,7 @@ struct RecordPaymentSheet: View {
     @State private var currencySymbol = "$"
     @State private var showCurrencyPicker = false
     @State private var note = ""
+    @State private var isSettlingAllDebts = false
     
     // Currency options - same as in other expense sheets
     private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼"]
@@ -81,15 +82,34 @@ struct RecordPaymentSheet: View {
                 EmptyView()
             }
             
-            // Record button
+            // Action buttons section
             Section {
-                Button(action: recordPayment) {
-                    Text("Record Payment")
-                        .frame(maxWidth: .infinity)
-                        .multilineTextAlignment(.center)
+                VStack(spacing: 12) {
+                    // Record Payment button
+                    Button(action: recordPayment) {
+                        Text("Record Payment")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(!isFormValid)
+                    
+                    // Settle All Balances button
+                    Button(action: settleAllBalances) {
+                        Text("Settle All My Balances")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .disabled(userHasNoBalances())
                 }
-                .disabled(!isFormValid)
+                .padding(.vertical, 4)
             }
+            .listRowInsets(EdgeInsets())
         }
         .navigationTitle("Record Payment")
         .navigationBarTitleDisplayMode(.inline)
@@ -133,6 +153,18 @@ struct RecordPaymentSheet: View {
         .onAppear {
             initializeDefaults()
         }
+        .disabled(isSettlingAllDebts)
+        .overlay(
+            Group {
+                if isSettlingAllDebts {
+                    ProgressView("Recording payments...")
+                        .padding()
+                        .background(Color(.systemBackground).opacity(0.8))
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
+                }
+            }
+        )
     }
     
     // MARK: - Helper Methods
@@ -215,5 +247,70 @@ struct RecordPaymentSheet: View {
         )
         
         dismiss()
+    }
+    
+    /// Check if the current user has any debts to settle
+    private func userHasNoBalances() -> Bool {
+        guard let trip = viewModel.currentTrip,
+              let currentUser = viewModel.findCurrentUserInTrip() else {
+            return true
+        }
+        
+        let debts = viewModel.calculateDebts()
+        // Check if the user is involved in any debts (either owing or being owed)
+        return !debts.contains { $0.from.id == currentUser.id || $0.to.id == currentUser.id }
+    }
+    
+    /// Automatically settle all balances the current user has (both debts owed and money owed to them)
+    private func settleAllBalances() {
+        guard let trip = viewModel.currentTrip,
+              let currentUser = viewModel.findCurrentUserInTrip() else {
+            return
+        }
+        
+        let debts = viewModel.calculateDebts()
+        
+        // Filter debts where the current user is involved (either owing or being owed)
+        let myBalances = debts.filter { $0.from.id == currentUser.id || $0.to.id == currentUser.id }
+        
+        if myBalances.isEmpty {
+            return
+        }
+        
+        isSettlingAllDebts = true
+        
+        // Process each balance and record a payment
+        for debt in myBalances {
+            // Determine if the user is the payer or recipient
+            if debt.from.id == currentUser.id {
+                // User owes money to someone else
+                let paymentTitle = "Payment from \(currentUser.name) to \(debt.to.name)"
+                
+                viewModel.addPaymentToCurrentTrip(
+                    title: paymentTitle,
+                    amount: debt.amount,
+                    paidBy: currentUser,
+                    paidTo: debt.to,
+                    currencyCode: trip.baseCurrencyCode
+                )
+            } else {
+                // Someone owes money to the user
+                let paymentTitle = "Payment from \(debt.from.name) to \(currentUser.name)"
+                
+                viewModel.addPaymentToCurrentTrip(
+                    title: paymentTitle,
+                    amount: debt.amount,
+                    paidBy: debt.from,
+                    paidTo: currentUser,
+                    currencyCode: trip.baseCurrencyCode
+                )
+            }
+        }
+        
+        // Introduce a small delay to allow Firebase to process the updates
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isSettlingAllDebts = false
+            dismiss()
+        }
     }
 } 

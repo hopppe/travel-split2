@@ -71,7 +71,7 @@ struct SettledUpView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
-                .foregroundColor(.green)
+                .foregroundColor(.accentColor)
                 .accessibilityHidden(true)
             
             Text("All Settled Up!")

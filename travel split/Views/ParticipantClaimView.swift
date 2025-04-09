@@ -26,6 +26,7 @@ struct ParticipantClaimView: View {
                     .padding(.top)
                     .accessibilityAddTraits(.isHeader)
                 
+                // Description text - breaking up complex expressions
                 Text("A participant with similar name or email was found in this trip. Do you want to claim this participant as your account?")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -33,43 +34,7 @@ struct ParticipantClaimView: View {
                     .padding(.horizontal)
                 
                 // Match list and options
-                List {
-                    // Potential matches section
-                    Section(header: Text("Select a participant to claim")) {
-                        ForEach(potentialMatches) { participant in
-                            Button(action: {
-                                viewModel.claimParticipant(participant, inTrip: trip)
-                                completeJoining()
-                            }) {
-                                ParticipantMatchRow(participant: participant)
-                            }
-                            .accessibilityHint("Claim this participant as your account")
-                        }
-                    }
-                    
-                    // Join as new section
-                    Section {
-                        Button(action: {
-                            viewModel.addCurrentUserToTrip(trip)
-                            completeJoining()
-                        }) {
-                            HStack {
-                                Text("Join as a new participant")
-                                    .fontWeight(.medium)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "person.badge.plus")
-                            }
-                            .foregroundColor(.blue)
-                        }
-                        .accessibilityHint("Join the trip as a new participant")
-                    } footer: {
-                        Text("If none of these participants are you, join as a new participant instead.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                matchesList
             }
             .navigationTitle("Join Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -83,24 +48,70 @@ struct ParticipantClaimView: View {
         }
     }
     
+    // Extract the list into a separate view property
+    private var matchesList: some View {
+        List {
+            // Potential matches section
+            Section(header: Text("Select a participant to claim")) {
+                ForEach(potentialMatches) { participant in
+                    Button(action: {
+                        // Updated to match the new function signature
+                        viewModel.claimParticipant(participant)
+                        completeJoining()
+                    }) {
+                        ParticipantMatchRow(participant: participant)
+                    }
+                    .accessibilityHint("Claim this participant as your account")
+                }
+            }
+            
+            // Join as new section
+            Section {
+                Button(action: {
+                    viewModel.addCurrentUserToTrip(trip)
+                    completeJoining()
+                }) {
+                    HStack {
+                        Text("Join as a new participant")
+                            .fontWeight(.medium)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "person.badge.plus")
+                    }
+                    .foregroundColor(.blue)
+                }
+                .accessibilityHint("Join the trip as a new participant")
+            } footer: {
+                Text("If none of these participants are you, join as a new participant instead.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
     // Handle completion of joining a trip - dismiss all sheets
     private func completeJoining() {
-        // Reset the view state
-        viewModel.showParticipantClaimingView = false
-        viewModel.potentialClaimableParticipants = []
-        
-        // Dismiss this view
-        dismiss()
+        // Reset the view state using property wrapper syntax for published properties
+        DispatchQueue.main.async {
+            self.viewModel.showParticipantClaimingView = false
+            self.viewModel.potentialClaimableParticipants = []
+            
+            // Dismiss this view
+            self.dismiss()
+        }
     }
     
     // Handle cancellation of joining a trip
     private func cancelJoining() {
-        // Reset the view state
-        viewModel.showParticipantClaimingView = false
-        viewModel.potentialClaimableParticipants = []
-        
-        // Dismiss this view
-        dismiss()
+        // Reset the view state using property wrapper syntax for published properties
+        DispatchQueue.main.async {
+            self.viewModel.showParticipantClaimingView = false
+            self.viewModel.potentialClaimableParticipants = []
+            
+            // Dismiss this view
+            self.dismiss()
+        }
     }
 }
 
@@ -158,6 +169,10 @@ struct ParticipantMatchRow: View {
         User.createUnclaimed(name: "John", email: "john@example.com"),
         User.createUnclaimed(name: "Preview User")
     ]
+    
+    // Set up viewModel for previewing
+    viewModel.potentialClaimableParticipants = potentialMatches
+    viewModel.showParticipantClaimingView = true
     
     return ParticipantClaimView(viewModel: viewModel, potentialMatches: potentialMatches, trip: trip)
 } 

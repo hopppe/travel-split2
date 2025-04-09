@@ -36,22 +36,9 @@
 		D0D7433B2D791A0E00887648 /* travel splitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "travel splitUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D0D7FDF72DA576180014AE7E /* Exceptions for "travel split" folder in "travel split" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"travel-split-Info.plist",
-			);
-			target = D0D743202D791A0A00887648 /* travel split */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D0D743232D791A0A00887648 /* travel split */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D0D7FDF72DA576180014AE7E /* Exceptions for "travel split" folder in "travel split" target */,
-			);
 			path = "travel split";
 			sourceTree = "<group>";
 		};

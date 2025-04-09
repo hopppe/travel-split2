@@ -4,12 +4,18 @@ struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var authService = AuthenticationService.shared
     
+    @Binding var hasCompletedSetup: Bool
+    
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var name = ""
     @State private var isLoading = false
     @State private var showError = false
+    
+    init(hasCompletedSetup: Binding<Bool> = .constant(false)) {
+        self._hasCompletedSetup = hasCompletedSetup
+    }
     
     var body: some View {
         NavigationView {
@@ -48,6 +54,13 @@ struct SignUpView: View {
             }
             .navigationTitle("Create Account")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
             .alert("Error", isPresented: $showError) {
                 Button("OK") { }
             } message: {
@@ -76,6 +89,8 @@ struct SignUpView: View {
             isLoading = false
             
             if success {
+                self.hasCompletedSetup = true
+                
                 dismiss()
             } else {
                 showError = true

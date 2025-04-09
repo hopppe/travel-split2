@@ -102,11 +102,6 @@ struct AddParticipantSheet: View {
                         VStack(spacing: 12) {
                             TextField("Name", text: $participants[index].name)
                                 .padding(.vertical, 4)
-                            
-                            TextField("Email (optional)", text: $participants[index].email)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                                .padding(.vertical, 4)
                         }
                         .padding(.bottom, 8)
                         .overlay(
@@ -161,25 +156,21 @@ struct AddParticipantSheet: View {
     
     // Form validation
     private var isFormValid: Bool {
-        !participants.isEmpty && participants.allSatisfy { !$0.name.isEmpty }
+        // Valid if either:
+        // 1. There's at least one manually added participant with a non-empty name, OR
+        // 2. There's at least one selected previous participant
+        let hasValidManualParticipants = !participants.isEmpty && participants.allSatisfy { !$0.name.isEmpty }
+        let hasSelectedPreviousParticipants = !selectedPreviousParticipants.isEmpty
+        
+        return hasValidManualParticipants || hasSelectedPreviousParticipants
     }
     
     // Toggle the selection of a previous participant
     private func toggleParticipantSelection(_ participant: User) {
         if selectedPreviousParticipants.contains(participant.id) {
             selectedPreviousParticipants.remove(participant.id)
-            
-            // Remove from the participants list if they were added
-            participants.removeAll { entry in
-                // Match by name since we don't have the ID in AddParticipantEntry
-                return entry.name == participant.name && entry.email == participant.email
-            }
         } else {
             selectedPreviousParticipants.insert(participant.id)
-            
-            // Add to the participants list
-            let entry = AddParticipantEntry(name: participant.name, email: participant.email)
-            participants.append(entry)
         }
     }
     
@@ -188,15 +179,22 @@ struct AddParticipantSheet: View {
         // Filter out empty entries
         let validParticipants = participants.filter { !$0.name.isEmpty }
         
-        // Add each participant
+        // Add manually entered participants
         for entry in validParticipants {
             let newParticipant = User.createUnclaimed(
                 name: entry.name,
-                email: entry.email
+                email: ""
             )
             
             // Call the method on the view model
             viewModel.addParticipantToCurrentTrip(newParticipant)
+        }
+        
+        // Add selected previous participants
+        for participantId in selectedPreviousParticipants {
+            if let participant = previousParticipants.first(where: { $0.id == participantId }) {
+                viewModel.addParticipantToCurrentTrip(participant)
+            }
         }
         
         // Dismiss the sheet

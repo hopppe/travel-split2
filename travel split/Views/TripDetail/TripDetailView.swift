@@ -114,7 +114,7 @@ struct TripDetailView: View {
         
         // Create a simple share message with just the essentials
         let shareMessage = """
-        Join my group '\(trip.name)' in Travel Split!
+        Join my group '\(trip.name)' in Free Split!
         
         Link: \(deepLinkURL)
         Code: \(trip.inviteCode)

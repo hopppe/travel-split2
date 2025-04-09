@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import FirebaseAuth
 
 // MARK: - Main Trip List View
 /// The main view that displays all trips and provides options to create or join trips
@@ -50,7 +51,9 @@ struct TripsListView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "person.circle")
-                            Text(viewModel.currentUser.name)
+                            // Use Firebase displayName only if available, otherwise use the existing name
+                            let displayName = Auth.auth().currentUser?.displayName ?? viewModel.currentUser.name
+                            Text(displayName)
                                 .lineLimit(1)
                         }
                     }
@@ -82,6 +85,10 @@ struct TripsListView: View {
             }
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileView(tripViewModel: viewModel)
+                    .onDisappear {
+                        // Ensure we sync the name when returning from profile edits
+                        syncUserNameFromFirebase()
+                    }
             }
             .alert(item: $alertItem) { item in
                 Alert(
@@ -89,6 +96,10 @@ struct TripsListView: View {
                     message: Text(item.message),
                     dismissButton: .default(Text("OK"))
                 )
+            }
+            .onAppear {
+                // Sync the user name from Firebase when the view appears
+                syncUserNameFromFirebase()
             }
         }
         .onReceive(viewModel.$errorMessage) { errorMessage in
@@ -108,6 +119,21 @@ struct TripsListView: View {
     
     // MARK: - Helper Methods
     
+    /// Synchronizes the user name from Firebase
+    private func syncUserNameFromFirebase() {
+        if let currentUser = Auth.auth().currentUser {
+            // Only update if Firebase actually has a display name (not nil)
+            if let firebaseDisplayName = currentUser.displayName {
+                // Update the viewModel only if the name is different
+                if viewModel.currentUser.name != firebaseDisplayName {
+                    var updatedUser = viewModel.currentUser
+                    updatedUser.name = firebaseDisplayName
+                    viewModel.updateCurrentUser(updatedUser)
+                }
+            }
+        }
+    }
+    
     /// Shares a trip with other users
     private func shareTrip() {
         guard let trip = viewModel.currentTrip else { return }
@@ -117,7 +143,7 @@ struct TripsListView: View {
         
         // Create a simple share message with just the essentials
         let shareMessage = """
-        Join my group '\(trip.name)' in Travel Split!
+        Join my group '\(trip.name)' in Free Split!
         
         Link: \(deepLinkURL)
         Code: \(trip.inviteCode)
@@ -165,7 +191,7 @@ struct EmptyTripsView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "airplane.circle.fill")
+            Image(systemName: "person.3.fill")
                 .font(.system(size: 72))
                 .foregroundColor(.accentColor)
                 .accessibilityHidden(true)
@@ -498,11 +524,6 @@ struct NewTripSheet: View {
                             VStack(spacing: 12) {
                                 TextField("Name", text: $participants[index].name)
                                     .padding(.vertical, 4)
-                                
-                                TextField("Email (optional)", text: $participants[index].email)
-                                    .keyboardType(.emailAddress)
-                                    .autocapitalization(.none)
-                                    .padding(.vertical, 4)
                             }
                             .padding(.bottom, 8)
                             .overlay(
@@ -573,13 +594,13 @@ struct NewTripSheet: View {
             // Remove from the participants list if they were added
             participants.removeAll { entry in
                 // Match by name since we don't have the ID in TripParticipantEntry
-                return entry.name == participant.name && entry.email == participant.email
+                return entry.name == participant.name
             }
         } else {
             selectedPreviousParticipants.insert(participant.id)
             
             // Add to the participants list
-            let entry = TripParticipantEntry(name: participant.name, email: participant.email)
+            let entry = TripParticipantEntry(name: participant.name, email: "")
             participants.append(entry)
         }
     }
@@ -597,7 +618,7 @@ struct NewTripSheet: View {
             initialParticipants = validParticipants.map { entry in
                 User.createUnclaimed(
                     name: entry.name,
-                    email: entry.email
+                    email: ""
                 )
             }
         }

@@ -25,11 +25,14 @@ class FirebaseService {
         // Firebase is now configured in AppDelegate
         print("Firebase Service initialized")
         
-        // Check if user is already authenticated
-        if let user = Auth.auth().currentUser {
-            self.userId = user.uid
-            self.isAuthenticated = true
-            print("User is already authenticated with ID: \(user.uid)")
+        // Defer checking for current user to make sure Firebase is configured
+        DispatchQueue.main.async {
+            // Check if user is already authenticated
+            if let user = Auth.auth().currentUser {
+                self.userId = user.uid
+                self.isAuthenticated = true
+                print("User is already authenticated with ID: \(user.uid)")
+            }
         }
     }
     
@@ -37,84 +40,119 @@ class FirebaseService {
     
     // Sign in anonymously
     func signInAnonymously(completion: @escaping (Bool, Error?) -> Void) {
-        print("Attempting anonymous sign in...")
+        // Check if anonymous auth is allowed
+        if !UserDefaults.standard.bool(forKey: "allowAnonymousAuth") {
+            print("Anonymous authentication is disabled")
+            completion(false, NSError(domain: "FirebaseService", code: 403, userInfo: [NSLocalizedDescriptionKey: "Anonymous authentication is disabled"]))
+            return
+        }
         
-        // First check if we already have an anonymous user
-        if let currentUser = Auth.auth().currentUser, currentUser.isAnonymous {
-            print("Already have an anonymous user: \(currentUser.uid)")
-            self.userId = currentUser.uid
+        // Check if already signed in
+        if let currentUser = Auth.auth().currentUser {
+            print("User already authenticated with ID: \(currentUser.uid)")
             self.isAuthenticated = true
-            
-            // Load user data from UserDefaults if available
-            if let name = UserDefaults.standard.string(forKey: "user_name"),
-               let _ = UserDefaults.standard.string(forKey: "user_email"),
-               let savedUserId = UserDefaults.standard.string(forKey: "user_id"),
-               !name.isEmpty {
-                print("Found saved user data for anonymous user: \(name)")
-                
-                // If the saved ID doesn't match the current Firebase ID, update it
-                if savedUserId != currentUser.uid {
-                    print("Updating saved user ID to match Firebase ID")
-                    UserDefaults.standard.set(currentUser.uid, forKey: "user_id")
-                }
-            }
-            
             completion(true, nil)
             return
         }
         
-        // Check if Anonymous auth is enabled in the Firebase console
+        // Get the stored user ID from UserDefaults for potential migration
+        let storedUserId = UserDefaults.standard.string(forKey: "user_id")
+        print("Stored user ID from UserDefaults: \(storedUserId ?? "none")")
+        
         Auth.auth().signInAnonymously { authResult, error in
             if let error = error {
-                // Get more detailed error info
-                let errorCode = (error as NSError).code
-                let errorMessage = error.localizedDescription
-                let errorUserInfo = (error as NSError).userInfo
-                
-                print("Error signing in anonymously: \(errorMessage)")
-                print("Error code: \(errorCode)")
-                print("Error details: \(errorUserInfo)")
-                
-                // Check for specific error conditions
-                if errorCode == AuthErrorCode.operationNotAllowed.rawValue {
-                    print("CRITICAL: Anonymous authentication is not enabled in the Firebase console!")
-                    print("Go to Firebase Console > Authentication > Sign-in method and enable Anonymous authentication")
-                }
-                
+                print("Error signing in anonymously: \(error.localizedDescription)")
+                self.isAuthenticated = false
                 completion(false, error)
                 return
             }
             
-            guard let user = authResult?.user else {
-                print("Warning: Auth successful but no user returned")
-                completion(false, NSError(domain: "FirebaseService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get user after authentication"]))
+            guard let authResult = authResult else {
+                print("Error: No auth result returned")
+                self.isAuthenticated = false
+                completion(false, NSError(domain: "FirebaseService", code: 1, userInfo: [NSLocalizedDescriptionKey: "No auth result returned"]))
                 return
             }
             
-            self.userId = user.uid
-            self.isAuthenticated = true
-            print("User signed in anonymously with ID: \(user.uid)")
+            let firebaseUserId = authResult.user.uid
+            print("Successfully signed in anonymously with Firebase ID: \(firebaseUserId)")
             
-            // Check if we have existing user data from a previous session
-            if let name = UserDefaults.standard.string(forKey: "user_name"),
-               let _ = UserDefaults.standard.string(forKey: "user_email"),
-               let savedUserId = UserDefaults.standard.string(forKey: "user_id"),
-               !name.isEmpty {
-                print("Found saved user data: \(name)")
+            self.isAuthenticated = true
+            
+            // Handle migration if we have a different stored user ID
+            if let storedId = storedUserId, storedId != firebaseUserId, !storedId.isEmpty, !storedId.contains("-") {
+                // Only migrate if the stored ID appears to be a valid Firebase ID (not a UUID)
+                print("Migrating user data from \(storedId) to \(firebaseUserId)")
                 
-                // If the saved ID doesn't match the current Firebase ID, update it
-                if savedUserId != user.uid {
-                    print("Updating saved user ID to match Firebase ID")
-                    UserDefaults.standard.set(user.uid, forKey: "user_id")
+                self.migrateUserData(fromId: storedId, toId: firebaseUserId) { success in
+                    if success {
+                        print("User data migration completed successfully")
+                    } else {
+                        print("User data migration failed or partially completed")
+                    }
+                    completion(true, nil)
                 }
             } else {
-                // No saved data, create default
-                UserDefaults.standard.set("You", forKey: "user_name")
-                UserDefaults.standard.set("", forKey: "user_email")
-                UserDefaults.standard.set(user.uid, forKey: "user_id")
+                // No migration needed
+                completion(true, nil)
+            }
+        }
+    }
+    
+    private func migrateUserData(fromId: String, toId: String, completion: @escaping (Bool) -> Void) {
+        let db = Firestore.firestore()
+        let batch = db.batch()
+        
+        // Update trips where the user is a participant
+        db.collection("trips").whereField("participants", arrayContains: fromId).getDocuments { snapshot, error in
+            guard let documents = snapshot?.documents, error == nil else {
+                print("Error fetching trips for migration: \(error?.localizedDescription ?? "Unknown error")")
+                completion(false)
+                return
             }
             
-            completion(true, nil)
+            for document in documents {
+                let tripRef = db.collection("trips").document(document.documentID)
+                
+                // Get current participants array
+                if var participants = document.data()["participants"] as? [String] {
+                    // Replace old ID with new ID if it exists
+                    if let index = participants.firstIndex(of: fromId) {
+                        participants[index] = toId
+                        batch.updateData(["participants": participants], forDocument: tripRef)
+                    }
+                }
+                
+                // Update expenses in this trip
+                db.collection("trips").document(document.documentID).collection("expenses")
+                    .whereField("paidBy", isEqualTo: fromId).getDocuments { expSnapshot, expError in
+                        guard let expDocuments = expSnapshot?.documents, expError == nil else {
+                            print("Error fetching expenses for migration: \(expError?.localizedDescription ?? "Unknown error")")
+                            return
+                        }
+                        
+                        for expDoc in expDocuments {
+                            let expRef = tripRef.collection("expenses").document(expDoc.documentID)
+                            batch.updateData(["paidBy": toId], forDocument: expRef)
+                        }
+                        
+                        // Commit all the changes as a batch
+                        batch.commit { batchError in
+                            if let batchError = batchError {
+                                print("Error committing migration batch: \(batchError.localizedDescription)")
+                                completion(false)
+                            } else {
+                                print("Migration batch committed successfully")
+                                completion(true)
+                            }
+                        }
+                    }
+            }
+            
+            // If no documents were found, consider it a success
+            if documents.isEmpty {
+                completion(true)
+            }
         }
     }
     
@@ -123,25 +161,42 @@ class FirebaseService {
         return Auth.auth().currentUser?.uid
     }
     
+    // Get current Firebase user
+    func getCurrentUser() -> FirebaseAuth.User? {
+        return Auth.auth().currentUser
+    }
+    
     // MARK: - Firestore Integration
     
     // Save a trip to Firestore
     func saveTrip(_ trip: Trip, completion: @escaping (Bool, Error?) -> Void) {
+        print("Starting to save trip to Firestore: \(trip.id)")
         // Real Firestore implementation
         let db = Firestore.firestore()
         
         // Make sure user is authenticated before saving
-        guard Auth.auth().currentUser != nil else {
+        guard let currentUser = Auth.auth().currentUser else {
+            print("No authenticated user found, attempting to sign in anonymously")
             // If not authenticated, try to authenticate first
             signInAnonymously { success, error in
                 if success {
                     // Retry saving after authentication
+                    print("Anonymous sign-in successful, retrying saveTrip")
                     self.saveTrip(trip, completion: completion)
                 } else {
+                    print("Anonymous sign-in failed: \(error?.localizedDescription ?? "unknown error")")
                     completion(false, error ?? NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required"]))
                 }
             }
             return
+        }
+        
+        print("Saving trip with authenticated user: \(currentUser.uid)")
+        print("Trip has \(trip.participants.count) participants")
+        
+        // Print participant IDs for debugging
+        for (index, participant) in trip.participants.enumerated() {
+            print("Participant \(index): id=\(participant.id), name=\(participant.name), isClaimed=\(participant.isClaimed)")
         }
         
         do {
@@ -150,7 +205,7 @@ class FirebaseService {
                     print("Error saving trip: \(error.localizedDescription)")
                     completion(false, error)
                 } else {
-                    print("Trip successfully saved!")
+                    print("Trip successfully saved to Firestore!")
                     completion(true, nil)
                 }
             }
@@ -158,6 +213,69 @@ class FirebaseService {
             print("Error encoding trip: \(error.localizedDescription)")
             completion(false, error)
         }
+    }
+    
+    // Fetch all trips where the user is a participant
+    func fetchTripsForUser(userId: String, completion: @escaping ([Trip]?, Error?) -> Void) {
+        // Make sure user is authenticated before fetching
+        guard Auth.auth().currentUser != nil else {
+            // If not authenticated, try to authenticate first
+            signInAnonymously { success, error in
+                if success {
+                    // Retry fetching after authentication
+                    self.fetchTripsForUser(userId: userId, completion: completion)
+                } else {
+                    completion(nil, error ?? NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required"]))
+                }
+            }
+            return
+        }
+        
+        print("Fetching trips for user: \(userId)")
+        
+        // Real Firestore implementation
+        let db = Firestore.firestore()
+        
+        // Query for all trips - we'll filter for user membership client-side
+        // This approach is necessary because Firestore doesn't support querying on nested fields in arrays
+        db.collection("trips")
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error fetching trips: \(error.localizedDescription)")
+                    completion(nil, error)
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    print("No trips found")
+                    completion([], nil)
+                    return
+                }
+                
+                var trips: [Trip] = []
+                
+                for document in documents {
+                    do {
+                        let trip = try document.data(as: Trip.self)
+                        
+                        // Check if the user is a participant in this trip
+                        let isParticipant = trip.participants.contains { participant in
+                            return participant.id == userId || participant.claimedByUserId == userId
+                        }
+                        
+                        if isParticipant {
+                            print("User is a participant in trip: \(trip.id), \(trip.name)")
+                            trips.append(trip)
+                        }
+                    } catch {
+                        print("Error decoding trip \(document.documentID): \(error.localizedDescription)")
+                        // Continue loading other trips even if one fails
+                    }
+                }
+                
+                print("Found \(trips.count) trips where user is a participant")
+                completion(trips, nil)
+            }
     }
     
     // Fetch a trip from Firestore by invite code
@@ -274,13 +392,13 @@ class FirebaseService {
     
     // Generate a shareable message for the invite code
     func generateShareMessage(inviteCode: String, tripName: String) -> String {
-        // Create a deep link
-        let deepLinkURL = createDeepLink(inviteCode: inviteCode)
+        // Create deep link if possible, otherwise just use the invite code directly
+        let deepLink = createDeepLink(inviteCode: inviteCode)
         
         return """
-        Join my trip "\(tripName)" in Travel Split!
+        Join my group "\(tripName)" in Free Split!
         
-        Link: \(deepLinkURL)
+        Link: \(deepLink)
         Code: \(inviteCode)
         """
     }

@@ -8,13 +8,62 @@
 import SwiftUI
 // Import FirebaseCore in the main app file too
 import FirebaseCore
+import FirebaseAuth
+import Combine
 
 @main
 struct TravelSplitApp: App {
     // Register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
-    // Create user from saved preferences or default
+    // Add a flag to control whether we allow anonymous authentication
+    @AppStorage("allowAnonymousAuth") private var allowAnonymousAuth = true
+    
+    // Track if this is the first launch
+    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
+    
+    // For tracking sign out
+    @State private var userHasSignedOut = false
+    
+    // Initialize Firebase first
+    init() {
+        // Note: Firebase is configured in AppDelegate, don't configure it again here
+        print("TravelSplitApp initialized")
+        
+        // Don't access Auth directly in the initializer; use a slight delay to ensure
+        // the AppDelegate has had time to configure Firebase
+        DispatchQueue.main.async { [self] in
+            // Now it's safe to access Auth
+            if let user = Auth.auth().currentUser {
+                print("Firebase user already exists at app startup: \(user.uid)")
+                print("User is anonymous: \(user.isAnonymous)")
+                
+                // If the user has an email, they're a real user (not anonymous)
+                if let email = user.email, !email.isEmpty {
+                    print("User has email: \(email), marking as real user")
+                    // Disable anonymous auth since we have a real user
+                    allowAnonymousAuth = false
+                }
+                
+                // Store values in UserDefaults, but don't modify self directly here
+                UserDefaults.standard.set(true, forKey: "hasCompletedSetup")
+                
+                // Update the UI on the main thread
+                DispatchQueue.main.async {
+                    // Ensure hasCompletedSetup is true since we have a Firebase user
+                    hasCompletedSetup = true
+                }
+            } else {
+                // No Firebase user at startup - show welcome screen
+                print("No Firebase user at startup, showing welcome screen")
+                DispatchQueue.main.async {
+                    hasCompletedSetup = false
+                }
+            }
+        }
+    }
+    
+    // Create the view model with current user
     @StateObject private var tripViewModel = TripViewModel(
         currentUser: TripViewModel.loadOrCreateUser()
     )
@@ -22,50 +71,93 @@ struct TravelSplitApp: App {
     // For handling deep links
     @Environment(\.openURL) private var openURL
     @State private var selectedInviteCode: String?
+    @State private var inviteCode: String = ""
     @State private var showJoinTripSheet = false
     @State private var showClaimSheet = false
     @State private var showUserProfileSetup = false
     
-    // Track if this is the first launch
-    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
-    
     var body: some Scene {
         WindowGroup {
-            if !hasCompletedSetup {
-                // Show welcome screen for new users
+            if !hasCompletedSetup || userHasSignedOut {
+                // Show welcome screen for new users or after sign out
                 WelcomeView(tripViewModel: tripViewModel, hasCompletedSetup: $hasCompletedSetup)
+                    .tint(.indigo) // Add consistent tint color
+                    .onAppear {
+                        // Reset the sign out flag when the welcome view appears
+                        userHasSignedOut = false
+                    }
             } else {
                 // Show main app interface for existing users
                 TripsListView(viewModel: tripViewModel)
                     .tint(.indigo) // Set app accent color
-                    .onOpenURL { url in
-                        // Handle deep links
-                        handleIncomingURL(url)
-                    }
                     .onAppear {
                         // Set up appearance
                         configureAppearance()
                         
-                        // No need to call FirebaseApp.configure() here anymore
-                        // It's now handled by the AppDelegate
+                        // Check for deep links
+                        handleStartupDeepLink()
                         
-                        // Initialize Firebase service
-                        _ = FirebaseService.shared
+                        // Set up observer for claiming view
+                        setupTripViewModelObservers()
+                    }
+                    .onOpenURL { url in
+                        // Handle deep link when app is already running
+                        handleDeepLink(url)
                     }
                     .sheet(isPresented: $showJoinTripSheet) {
-                        JoinTripWithCodeView(viewModel: tripViewModel, inviteCode: selectedInviteCode ?? "")
+                        JoinTripWithCodeView(viewModel: tripViewModel, inviteCode: inviteCode)
                     }
-                    .sheet(isPresented: $showClaimSheet) {
-                        if let trip = tripViewModel.currentTrip, !tripViewModel.potentialClaimableParticipants.isEmpty {
-                            ParticipantClaimView(
-                                viewModel: tripViewModel,
-                                potentialMatches: tripViewModel.potentialClaimableParticipants,
-                                trip: trip
-                            )
-                        }
+                    .sheet(isPresented: $showClaimSheet, onDismiss: {
+                        // Reset the view model's flag when the sheet is dismissed
+                        print("Claim sheet dismissed, resetting showParticipantClaimingView")
+                        tripViewModel.showParticipantClaimingView = false
+                    }) {
+                        ClaimViewCoordinator(
+                            viewModel: tripViewModel,
+                            showClaimSheet: $showClaimSheet
+                        )
                     }
             }
         }
+    }
+    
+    // MARK: - View Model Observers
+    
+    // Set up observers for the view model properties
+    private func setupTripViewModelObservers() {
+        // Add observer for sign out notifications
+        NotificationCenter.default.addObserver(forName: .userDidSignOut, object: nil, queue: .main) { [self] _ in
+            print("Received user sign out notification")
+            // First trigger the UI transition
+            self.userHasSignedOut = true
+            
+            // Then reset the trip view model with a slight delay to avoid conflicts
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Reset the trip view model
+                self.tripViewModel.reset()
+            }
+        }
+        
+        // Add observer for the showParticipantClaimingView property
+        tripViewModel.$showParticipantClaimingView
+            .sink { showClaiming in
+                print("Observer detected showParticipantClaimingView changed to: \(showClaiming)")
+                if showClaiming {
+                    print("ViewModel says to show participant claiming view")
+                    self.tripViewModel.logParticipantClaimingState()
+                    DispatchQueue.main.async {
+                        self.showClaimSheet = true
+                    }
+                }
+            }
+            .store(in: &tripViewModel.cancellables)
+        
+        // Also monitor potentialClaimableParticipants changes
+        tripViewModel.$potentialClaimableParticipants
+            .sink { participants in
+                print("Observer detected potentialClaimableParticipants changed, count: \(participants.count)")
+            }
+            .store(in: &tripViewModel.cancellables)
     }
     
     // Handle incoming URLs 
@@ -101,23 +193,20 @@ struct TravelSplitApp: App {
             return
         }
         
-        // Auto-join the trip instead of showing the join sheet
+        // Auto-join the trip directly
         tripViewModel.autoJoinTrip(withInviteCode: inviteCode) { success in
             if !success {
-                // Check if we need to show the claim sheet instead of the join sheet
+                // Check if we need to show the claim sheet instead
                 if self.tripViewModel.showParticipantClaimingView {
-                    // The claim sheet will be automatically shown via the onChange handler
-                    // Just set the invite code in case needed
+                    // Set showClaimSheet to true to ensure the claim view appears
                     DispatchQueue.main.async {
+                        print("Setting showClaimSheet to true from handleIncomingURL")
                         self.selectedInviteCode = inviteCode
-                    }
-                } else {
-                    // If auto-join failed for other reasons, show the join sheet
-                    DispatchQueue.main.async {
-                        self.selectedInviteCode = inviteCode
-                        self.showJoinTripSheet = true
+                        self.inviteCode = inviteCode
+                        self.showClaimSheet = true
                     }
                 }
+                // We no longer show the join sheet even if auto-join fails for other reasons
             }
         }
     }
@@ -132,6 +221,21 @@ struct TravelSplitApp: App {
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    }
+    
+    // Handle startup deep link
+    private func handleStartupDeepLink() {
+        // Check if we have a deep link waiting to be processed from startup
+        if let url = delegate.launchURL {
+            print("Processing deep link from startup: \(url)")
+            handleIncomingURL(url)
+        }
+    }
+    
+    // Handle deep link
+    private func handleDeepLink(_ url: URL) {
+        print("Processing deep link while app is running: \(url)")
+        handleIncomingURL(url)
     }
 }
 
@@ -189,7 +293,7 @@ struct JoinTripWithCodeView: View {
     }
     
     private func joinTrip() {
-        viewModel.joinTrip(withInviteCode: manualCode)
+        viewModel.joinTrip(withInviteCode: manualCode, completion: nil)
         // We delay the dismiss to allow the error message to be shown if needed
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             if viewModel.errorMessage == nil {

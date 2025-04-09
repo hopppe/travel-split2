@@ -14,7 +14,9 @@ struct ParticipantsView: View {
     @ObservedObject var viewModel: TripViewModel
     let trip: Trip
     let onAddParticipant: () -> Void
-    @State private var showShareSheet = false
+    @State private var participantToRemove: User?
+    @State private var showingRemoveConfirmation = false
+    @State private var showingBalanceWarning = false
     
     var body: some View {
         ZStack {
@@ -32,13 +34,22 @@ struct ParticipantsView: View {
                             )
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(buildAccessibilityLabel(for: participant))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                // Don't show remove button for current user
+                                if !isCurrentUser(participant) {
+                                    Button("Remove", role: .destructive) {
+                                        participantToRemove = participant
+                                        handleRemoveParticipant(participant)
+                                    }
+                                }
+                            }
                         }
                     }
                     
                     // Invite section - only shown if there are unclaimed participants
                     if hasUnclaimedParticipants {
                         Section {
-                            Button(action: { showShareSheet = true }) {
+                            Button(action: { shareTrip() }) {
                                 HStack {
                                     Image(systemName: "square.and.arrow.up")
                                         .foregroundColor(.accentColor)
@@ -65,7 +76,7 @@ struct ParticipantsView: View {
                             }
                         }
                         .accessibilityHint("Add a new participant to this group")
-                    } footer: {
+                    
                         Text("Tip: You can add placeholder participants that others can claim when they join.")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -74,15 +85,36 @@ struct ParticipantsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showShareSheet) {
-            if let trip = viewModel.currentTrip {
-                let shareTrip = { self.shareTrip() }
-                ShareTripSheet(trip: trip, onShare: shareTrip)
+        .alert("Cannot Remove Participant", isPresented: $showingBalanceWarning) {
+            Button("OK", role: .cancel) {
+                participantToRemove = nil
+            }
+        } message: {
+            if let participant = participantToRemove {
+                Text("\(participant.name) has an outstanding balance. Participants with balances cannot be removed until their balance is zero.")
+            } else {
+                Text("Participants with outstanding balances cannot be removed.")
             }
         }
     }
     
     // MARK: - Helper Properties and Methods
+    
+    /// Checks if a participant is the current user
+    private func isCurrentUser(_ participant: User) -> Bool {
+        return participant.id == viewModel.currentUser.id || participant.claimedByUserId == viewModel.currentUser.id
+    }
+    
+    /// Handle the remove participant action
+    private func handleRemoveParticipant(_ participant: User) {
+        // Try to remove participant
+        let success = viewModel.removeParticipantFromCurrentTrip(participant)
+        
+        if !success {
+            // Participant has balance, show warning
+            showingBalanceWarning = true
+        }
+    }
     
     /// Count of unclaimed participants in the trip
     private var unclaimedParticipantCount: Int {
@@ -113,22 +145,19 @@ struct ParticipantsView: View {
     
     /// Share trip with others to join
     private func shareTrip() {
-        let shareLink = viewModel.generateShareLink()
+        // Get the deep link URL from FirebaseService
+        let deepLinkURL = FirebaseService.shared.createDeepLink(inviteCode: trip.inviteCode)
         
+        // Create a simple share message with just the essentials
         let shareMessage = """
-        Join our group '\(trip.name)' in Travel Split!
+        Join my group "\(trip.name)" in Free Split!
         
-        • \(trip.participants.count) participants (\(unclaimedParticipantCount) unclaimed)
-        • \(trip.expenses.count) expenses
-        
-        Use this link to join and claim your placeholder:
+        Link: \(deepLinkURL)
+        Code: \(trip.inviteCode)
         """
         
         let activityVC = UIActivityViewController(
-            activityItems: [
-                shareMessage,
-                shareLink
-            ],
+            activityItems: [shareMessage],
             applicationActivities: nil
         )
         
@@ -200,76 +229,5 @@ struct ParticipantBadge: View {
             .background(color.opacity(0.2))
             .foregroundColor(color)
             .cornerRadius(4)
-    }
-}
-
-// MARK: - Share Trip Sheet
-
-/// Simplified share sheet with a focus on claiming placeholders
-struct ShareTripSheet: View {
-    let trip: Trip
-    let onShare: () -> Void
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Text("Invite friends to join this group")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                
-                VStack(spacing: 16) {
-                    Image(systemName: "person.badge.plus.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.accentColor)
-                        .accessibilityHidden(true)
-                    
-                    Text("Share Group Invite")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .accessibilityAddTraits(.isHeader)
-                    
-                    Text("When people join with your invite link, they can claim placeholder participants you've already added.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color(UIColor.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                
-                Button(action: {
-                    onShare()
-                    dismiss()
-                }) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Share Invite Link")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                }
-                .accessibilityHint("Opens sharing options to send the invite link")
-                
-                Spacer()
-            }
-            .padding(.top, 24)
-            .navigationTitle("Share Group")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
     }
 } 
