@@ -225,8 +225,9 @@ struct AddMenuButton: View {
 struct TripListContentView: View {
     @ObservedObject var viewModel: TripViewModel
     let onShareTrip: () -> Void
-    @State private var tripToDelete: Trip?
-    @State private var showingDeleteConfirmation = false
+    @State private var tripToLeave: Trip?
+    @State private var showingLeaveConfirmation = false
+    @State private var showingBalanceWarning = false
     
     var body: some View {
         List {
@@ -236,9 +237,13 @@ struct TripListContentView: View {
                         TripRowView(trip: trip)
                     }
                     .swipeActions(edge: .trailing) {
-                        Button("Delete", role: .destructive) {
-                            tripToDelete = trip
-                            showingDeleteConfirmation = true
+                        Button("Leave", role: .destructive) {
+                            tripToLeave = trip
+                            if viewModel.canLeaveTrip(trip) {
+                                showingLeaveConfirmation = true
+                            } else {
+                                showingBalanceWarning = true
+                            }
                         }
                     }
                     .contextMenu {
@@ -253,10 +258,14 @@ struct TripListContentView: View {
                         Divider() // Visual separator
                         
                         Button(role: .destructive, action: {
-                            tripToDelete = trip
-                            showingDeleteConfirmation = true
+                            tripToLeave = trip
+                            if viewModel.canLeaveTrip(trip) {
+                                showingLeaveConfirmation = true
+                            } else {
+                                showingBalanceWarning = true
+                            }
                         }) {
-                            Label("Delete Group", systemImage: "trash.fill")
+                            Label("Leave Group", systemImage: "door.right.hand.open")
                                 .foregroundColor(.red)
                         }
                     }
@@ -266,22 +275,33 @@ struct TripListContentView: View {
         }
         .listStyle(InsetGroupedListStyle())
         .confirmationDialog(
-            "Delete Group",
-            isPresented: $showingDeleteConfirmation,
+            "Leave Group",
+            isPresented: $showingLeaveConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete for Everyone", role: .destructive) {
-                if let trip = tripToDelete {
-                    viewModel.deleteTrip(withId: trip.id)
-                    tripToDelete = nil
+            Button("Leave Group", role: .destructive) {
+                if let trip = tripToLeave {
+                    viewModel.leaveTrip(trip: trip)
+                    tripToLeave = nil
                 }
             }
             
             Button("Cancel", role: .cancel) {
-                tripToDelete = nil
+                tripToLeave = nil
             }
         } message: {
-            Text("This will permanently delete the group for all participants.")
+            Text("You will be removed from this group but other participants will still have access.")
+        }
+        .alert("Cannot Leave Group", isPresented: $showingBalanceWarning) {
+            Button("OK", role: .cancel) {
+                tripToLeave = nil
+            }
+        } message: {
+            if let trip = tripToLeave {
+                Text("You have an outstanding balance of \(viewModel.getUserBalanceString(trip)). You must settle all debts before leaving the group.")
+            } else {
+                Text("You must settle all debts before leaving the group.")
+            }
         }
     }
 }

@@ -90,7 +90,7 @@ struct TripActionsMenu: View {
             
             // Delete trip action
             Button(role: .destructive, action: onDeleteTrip) {
-                Label("Delete Group", systemImage: "trash.fill")
+                Label("Leave Group", systemImage: "door.right.hand.open")
             }
         } label: {
             Image(systemName: "ellipsis.circle")

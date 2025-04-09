@@ -1,9 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Simple testing rules - allow all authenticated users full access
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Trips collection
     match /trips/{tripId} {
-      allow read, write: if request.auth != null;
+      // Allow reading if user is authenticated
+      allow read: if isSignedIn();
+      
+      // Allow creating new trips when authenticated
+      allow create: if isSignedIn();
+      
+      // Allow updates when authenticated
+      allow update: if isSignedIn();
+      
+      // Allow deleting only for trips where:
+      // 1. User is authenticated and trip has ≤ 1 participant, OR
+      // 2. The trip has 0 participants left
+      allow delete: if isSignedIn() && 
+                   (resource.data.participants.size() <= 1) ||
+                   (resource.data.participants.size() == 0);
+    }
+    
+    // Users collection for storing user profiles
+    match /users/{userId} {
+      // Allow users to read and write their own profile
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      
+      // Allow reading other user profiles if authenticated
+      allow read: if isSignedIn();
     }
     
     // Default: deny all other access

@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - User Model
 struct User: Identifiable, Codable, Equatable, Hashable {
-    let id: String // Unique identifier 
+    var id: String // Unique identifier 
     var name: String
     var email: String
     var profileImage: String? // URL or asset name for profile image

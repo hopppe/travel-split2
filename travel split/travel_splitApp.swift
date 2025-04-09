@@ -26,56 +26,45 @@ struct TravelSplitApp: App {
     @State private var showClaimSheet = false
     @State private var showUserProfileSetup = false
     
+    // Track if this is the first launch
+    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
+    
     var body: some Scene {
         WindowGroup {
-            TripsListView(viewModel: tripViewModel)
-                .tint(.indigo) // Set app accent color
-                .onOpenURL { url in
-                    // Handle deep links
-                    handleIncomingURL(url)
-                }
-                .onAppear {
-                    // Set up appearance
-                    configureAppearance()
-                    
-                    // No need to call FirebaseApp.configure() here anymore
-                    // It's now handled by the AppDelegate
-                    
-                    // Initialize Firebase service
-                    _ = FirebaseService.shared
-                    
-                    // Check if we need to show user profile setup
-                    // This will be true for first-time users
-                    if tripViewModel.currentUser.name == "You" && 
-                       tripViewModel.currentUser.email == "you@example.com" {
-                        showUserProfileSetup = true
+            if !hasCompletedSetup {
+                // Show welcome screen for new users
+                WelcomeView(tripViewModel: tripViewModel, hasCompletedSetup: $hasCompletedSetup)
+            } else {
+                // Show main app interface for existing users
+                TripsListView(viewModel: tripViewModel)
+                    .tint(.indigo) // Set app accent color
+                    .onOpenURL { url in
+                        // Handle deep links
+                        handleIncomingURL(url)
                     }
-                }
-                .sheet(isPresented: $showJoinTripSheet) {
-                    JoinTripWithCodeView(viewModel: tripViewModel, inviteCode: selectedInviteCode ?? "")
-                }
-                .sheet(isPresented: $showClaimSheet) {
-                    if let trip = tripViewModel.currentTrip, !tripViewModel.potentialClaimableParticipants.isEmpty {
-                        ParticipantClaimView(
-                            viewModel: tripViewModel,
-                            potentialMatches: tripViewModel.potentialClaimableParticipants,
-                            trip: trip
-                        )
+                    .onAppear {
+                        // Set up appearance
+                        configureAppearance()
+                        
+                        // No need to call FirebaseApp.configure() here anymore
+                        // It's now handled by the AppDelegate
+                        
+                        // Initialize Firebase service
+                        _ = FirebaseService.shared
                     }
-                }
-                .sheet(isPresented: $showUserProfileSetup) {
-                    UserProfileView(tripViewModel: tripViewModel)
-                }
-                .onChange(of: tripViewModel.showParticipantClaimingView) { oldValue, newValue in
-                    // Show claim sheet when view model signals it's needed
-                    if newValue {
-                        showClaimSheet = true
-                        // Reset flag after showing
-                        DispatchQueue.main.async {
-                            tripViewModel.showParticipantClaimingView = false
+                    .sheet(isPresented: $showJoinTripSheet) {
+                        JoinTripWithCodeView(viewModel: tripViewModel, inviteCode: selectedInviteCode ?? "")
+                    }
+                    .sheet(isPresented: $showClaimSheet) {
+                        if let trip = tripViewModel.currentTrip, !tripViewModel.potentialClaimableParticipants.isEmpty {
+                            ParticipantClaimView(
+                                viewModel: tripViewModel,
+                                potentialMatches: tripViewModel.potentialClaimableParticipants,
+                                trip: trip
+                            )
                         }
                     }
-                }
+            }
         }
     }
     

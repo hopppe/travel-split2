@@ -39,6 +39,30 @@ class FirebaseService {
     func signInAnonymously(completion: @escaping (Bool, Error?) -> Void) {
         print("Attempting anonymous sign in...")
         
+        // First check if we already have an anonymous user
+        if let currentUser = Auth.auth().currentUser, currentUser.isAnonymous {
+            print("Already have an anonymous user: \(currentUser.uid)")
+            self.userId = currentUser.uid
+            self.isAuthenticated = true
+            
+            // Load user data from UserDefaults if available
+            if let name = UserDefaults.standard.string(forKey: "user_name"),
+               let _ = UserDefaults.standard.string(forKey: "user_email"),
+               let savedUserId = UserDefaults.standard.string(forKey: "user_id"),
+               !name.isEmpty {
+                print("Found saved user data for anonymous user: \(name)")
+                
+                // If the saved ID doesn't match the current Firebase ID, update it
+                if savedUserId != currentUser.uid {
+                    print("Updating saved user ID to match Firebase ID")
+                    UserDefaults.standard.set(currentUser.uid, forKey: "user_id")
+                }
+            }
+            
+            completion(true, nil)
+            return
+        }
+        
         // Check if Anonymous auth is enabled in the Firebase console
         Auth.auth().signInAnonymously { authResult, error in
             if let error = error {
@@ -70,6 +94,26 @@ class FirebaseService {
             self.userId = user.uid
             self.isAuthenticated = true
             print("User signed in anonymously with ID: \(user.uid)")
+            
+            // Check if we have existing user data from a previous session
+            if let name = UserDefaults.standard.string(forKey: "user_name"),
+               let _ = UserDefaults.standard.string(forKey: "user_email"),
+               let savedUserId = UserDefaults.standard.string(forKey: "user_id"),
+               !name.isEmpty {
+                print("Found saved user data: \(name)")
+                
+                // If the saved ID doesn't match the current Firebase ID, update it
+                if savedUserId != user.uid {
+                    print("Updating saved user ID to match Firebase ID")
+                    UserDefaults.standard.set(user.uid, forKey: "user_id")
+                }
+            } else {
+                // No saved data, create default
+                UserDefaults.standard.set("You", forKey: "user_name")
+                UserDefaults.standard.set("", forKey: "user_email")
+                UserDefaults.standard.set(user.uid, forKey: "user_id")
+            }
+            
             completion(true, nil)
         }
     }
@@ -137,6 +181,7 @@ class FirebaseService {
         
         db.collection("trips")
             .whereField("inviteCode", isEqualTo: code)
+            .limit(to: 1)
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching trip: \(error.localizedDescription)")

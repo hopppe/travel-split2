@@ -16,6 +16,7 @@ struct TripDetailView: View {
     @State private var selectedExpense: Expense?
     @State private var selectedTab = 0
     @State private var showingDeleteConfirmation = false
+    @State private var showingBalanceWarning = false
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -58,7 +59,13 @@ struct TripDetailView: View {
                     onAddParticipant: { showingAddParticipantSheet = true },
                     onShareTrip: shareTrip,
                     onChangeCurrency: { showingCurrencyPicker = true },
-                    onDeleteTrip: { showingDeleteConfirmation = true }
+                    onDeleteTrip: { 
+                        if viewModel.canLeaveTrip(trip) {
+                            showingDeleteConfirmation = true
+                        } else {
+                            showingBalanceWarning = true
+                        }
+                    }
                 )
             }
         }
@@ -79,19 +86,24 @@ struct TripDetailView: View {
             CurrencyCodePickerSheet(viewModel: viewModel, isPresented: $showingCurrencyPicker)
         }
         .confirmationDialog(
-            "Delete Group",
+            "Leave Group",
             isPresented: $showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete for Everyone", role: .destructive) {
-                deleteTrip()
+            Button("Leave Group", role: .destructive) {
+                leaveTrip()
             }
             
             Button("Cancel", role: .cancel) {
                 // Do nothing
             }
         } message: {
-            Text("This will permanently delete the group for all participants.")
+            Text("You will be removed from this group but other participants will still have access.")
+        }
+        .alert("Cannot Leave Group", isPresented: $showingBalanceWarning) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("You have an outstanding balance of \(viewModel.getUserBalanceString(trip)). You must settle all debts before leaving the group.")
         }
     }
     
@@ -131,6 +143,12 @@ struct TripDetailView: View {
     // Delete trip function
     private func deleteTrip() {
         viewModel.deleteTrip(withId: trip.id)
+        presentationMode.wrappedValue.dismiss()
+    }
+    
+    // Leave trip function
+    private func leaveTrip() {
+        viewModel.leaveTrip(trip: trip)
         presentationMode.wrappedValue.dismiss()
     }
 } 

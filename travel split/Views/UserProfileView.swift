@@ -1,83 +1,74 @@
 import SwiftUI
 
 struct UserProfileView: View {
-    @ObservedObject var tripViewModel: TripViewModel
-    @State private var userName: String = ""
-    @State private var userEmail: String = ""
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var authService = AuthenticationService.shared
+    @ObservedObject var tripViewModel: TripViewModel
+    
+    @State private var userName = ""
+    @State private var userEmail = ""
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var authErrorShown = false
+    @State private var showSignIn = false
+    @State private var showSignUp = false
+    @State private var isInitialSetup: Bool
     
-    // Detect if this is initial setup
-    var isInitialSetup: Bool {
-        return tripViewModel.currentUser.name == "You" && 
-               tripViewModel.currentUser.email == "you@example.com"
+    init(tripViewModel: TripViewModel, isInitialSetup: Bool = false) {
+        self.tripViewModel = tripViewModel
+        self.isInitialSetup = isInitialSetup
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationView {
             Form {
-                Section(header: Text("Your Profile")) {
-                    TextField("Your Name", text: $userName)
+                Section(header: Text("Profile")) {
+                    TextField("Name", text: $userName)
                         .textContentType(.name)
-                        .autocorrectionDisabled()
+                        .autocapitalization(.words)
                     
-                    TextField("Email (Optional)", text: $userEmail)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .autocorrectionDisabled()
+                    // Only show email field if user is authenticated
+                    if authService.isAuthenticated {
+                        TextField("Email", text: $userEmail)
+                            .textContentType(.emailAddress)
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
+                            .disabled(authService.isAuthenticated)
+                    }
                 }
                 
-                Section {
-                    Button(action: saveProfile) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            Text(isInitialSetup ? "Get Started" : "Save Profile")
-                                .frame(maxWidth: .infinity)
+                if !authService.isAuthenticated {
+                    Section {
+                        Button("Sign In") {
+                            showSignIn = true
+                        }
+                        
+                        Button("Create Account") {
+                            showSignUp = true
                         }
                     }
-                    .disabled(userName.isEmpty || isLoading)
-                    .buttonStyle(.borderedProminent)
-                }
-                
-                if authErrorShown {
+                } else {
                     Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("⚠️ Authentication Error")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                            Text("Please ensure Anonymous Authentication is enabled in your Firebase Console.")
-                            
-                            // Add a workaround for testing without authentication
-                            Button("Continue Without Authentication (Development Only)") {
-                                // Still save the profile locally even without auth
-                                saveProfileLocally()
+                        Button(action: saveProfile) {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                            } else {
+                                Text("Save Profile")
+                                    .frame(maxWidth: .infinity)
                             }
-                            .padding(.top, 8)
-                            .font(.caption)
                         }
-                        .padding(.vertical, 8)
+                        .disabled(userName.isEmpty || isLoading)
                     }
-                }
-                
-                if isInitialSetup {
+                    
                     Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Welcome to Travel Split!")
-                                .font(.headline)
-                            Text("Your name helps others identify you when splitting expenses.")
-                            Text("Your email is optional and only used to help friends find you.")
+                        Button("Sign Out", role: .destructive) {
+                            authService.signOut()
                         }
-                        .padding(.vertical, 8)
                     }
                 }
             }
-            .navigationTitle(isInitialSetup ? "Welcome" : "Edit Profile")
+            .navigationTitle(isInitialSetup ? "Welcome to Travel Split" : "Edit Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if !isInitialSetup {
@@ -88,60 +79,23 @@ struct UserProfileView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showSignIn) {
+                SignInView()
+            }
+            .sheet(isPresented: $showSignUp) {
+                SignUpView()
+            }
             .onAppear {
-                // Pre-fill fields with current values if not initial setup
-                if !isInitialSetup {
-                    userName = tripViewModel.currentUser.name
-                    userEmail = tripViewModel.currentUser.email
-                }
-                
-                // Ensure Firebase authentication is complete
-                ensureAuthentication()
+                // Pre-fill fields with current values
+                userName = tripViewModel.currentUser.name
+                userEmail = tripViewModel.currentUser.email
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
             }
-            .interactiveDismissDisabled(isInitialSetup) // Prevent dismissal if it's initial setup
-        }
-    }
-    
-    private func ensureAuthentication() {
-        isLoading = true
-        
-        // Sign in anonymously to ensure we have a Firebase user ID
-        FirebaseService.shared.signInAnonymously { success, error in
-            isLoading = false
-            
-            if !success {
-                // Show auth error section instead of a popup
-                authErrorShown = true
-                errorMessage = "Failed to set up your account: \(error?.localizedDescription ?? "Unknown error")"
-                print("Auth error in UserProfileView: \(errorMessage)")
-            }
-        }
-    }
-    
-    private func saveProfileLocally() {
-        guard !userName.isEmpty else { return }
-        
-        // Create an updated user with the new name and email
-        let updatedUser = User(
-            id: tripViewModel.currentUser.id,
-            name: userName,
-            email: userEmail,
-            profileImage: tripViewModel.currentUser.profileImage,
-            isClaimed: true
-        )
-        
-        // Update the current user in the view model
-        // This will still update locally but Firestore operations might fail
-        tripViewModel.updateCurrentUser(updatedUser)
-        
-        // Small delay to allow UI to update
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            dismiss()
+            .interactiveDismissDisabled(isInitialSetup)
         }
     }
     
@@ -150,23 +104,23 @@ struct UserProfileView: View {
         
         isLoading = true
         
-        // Save in the same way as saveProfileLocally
-        let updatedUser = User(
-            id: tripViewModel.currentUser.id,
-            name: userName,
-            email: userEmail,
-            profileImage: tripViewModel.currentUser.profileImage,
-            isClaimed: true
-        )
+        // Update the user in the trip view model
+        let updatedUser = User(id: authService.currentUser?.id ?? UUID().uuidString,
+                             name: userName,
+                             email: userEmail,
+                             profileImage: nil,
+                             isClaimed: true)
         
-        // Update the current user in the view model
-        tripViewModel.updateCurrentUser(updatedUser)
+        // Update the user in the view model
+        tripViewModel.updateUser(updatedUser)
         
-        // Small delay to allow UI to update
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            isLoading = false
-            dismiss()
-        }
+        // Save to UserDefaults
+        UserDefaults.standard.set(userName, forKey: "user_name")
+        UserDefaults.standard.set(userEmail, forKey: "user_email")
+        UserDefaults.standard.set(updatedUser.id, forKey: "user_id")
+        
+        isLoading = false
+        dismiss()
     }
 }
 

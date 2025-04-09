@@ -23,11 +23,13 @@ struct BalancesView: View {
                 
                 if debts.isEmpty {
                     SettledUpView()
+                        .environmentObject(viewModel)
                 } else {
                     BalancesContentView(trip: trip, debts: debts, viewModel: viewModel)
                 }
             } else {
                 NoExpensesView()
+                    .environmentObject(viewModel)
             }
         }
     }
@@ -62,6 +64,9 @@ struct CurrencyCodePickerSheet: View {
 
 /// View shown when all participants are settled (no debts)
 struct SettledUpView: View {
+    @State private var showingRecordPaymentSheet = false
+    @EnvironmentObject var viewModel: TripViewModel
+    
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
@@ -77,14 +82,41 @@ struct SettledUpView: View {
             Text("Everyone has paid their fair share")
                 .font(.body)
                 .foregroundColor(.secondary)
+                .padding(.bottom, 30)
+            
+            // Record Payment Button
+            Button(action: {
+                showingRecordPaymentSheet = true
+            }) {
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                    Text("Record a Payment")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.accentColor)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
+            .accessibilityLabel("Record a payment")
         }
+        .padding()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("All settled up. Everyone has paid their fair share.")
+        .sheet(isPresented: $showingRecordPaymentSheet) {
+            NavigationStack {
+                RecordPaymentSheet(viewModel: viewModel)
+            }
+        }
     }
 }
 
 /// View shown when there are no expenses to calculate balances
 struct NoExpensesView: View {
+    @State private var showingRecordPaymentSheet = false
+    @EnvironmentObject var viewModel: TripViewModel
+    
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "dollarsign.circle.fill")
@@ -100,9 +132,33 @@ struct NoExpensesView: View {
             Text("Add expenses to see who owes what")
                 .font(.body)
                 .foregroundColor(.secondary)
+                .padding(.bottom, 30)
+            
+            // Record Payment Button
+            Button(action: {
+                showingRecordPaymentSheet = true
+            }) {
+                HStack {
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                    Text("Record a Payment")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.accentColor)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
+            .accessibilityLabel("Record a payment")
         }
+        .padding()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("No expenses to calculate. Add expenses to see who owes what.")
+        .sheet(isPresented: $showingRecordPaymentSheet) {
+            NavigationStack {
+                RecordPaymentSheet(viewModel: viewModel)
+            }
+        }
     }
 }
 
@@ -113,58 +169,104 @@ struct BalancesContentView: View {
     let trip: Trip
     let debts: [Debt]
     @ObservedObject var viewModel: TripViewModel
+    @State private var showingRecordPaymentSheet = false
     
     var body: some View {
-        List {
-            // User balance overview section
-            Section(header: Text("Your Balance")) {
-                if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
-                    UserBalanceRow(
-                        user: currentUserInTrip,
-                        balance: calculateUserBalance(for: currentUserInTrip.id),
-                        isCurrentUser: true,
-                        currencySymbol: trip.baseCurrencySymbol,
-                        viewModel: viewModel
-                    )
-                } else {
-                    UserBalanceRow(
-                        user: viewModel.currentUser,
-                        balance: calculateUserBalance(for: viewModel.currentUser.id),
-                        isCurrentUser: true,
-                        currencySymbol: trip.baseCurrencySymbol,
-                        viewModel: viewModel
-                    )
+        VStack {
+            List {
+                // User balance overview section
+                Section(header: Text("Your Balance")) {
+                    if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
+                        UserBalanceRow(
+                            user: currentUserInTrip,
+                            balance: calculateUserBalance(for: currentUserInTrip.id),
+                            isCurrentUser: true,
+                            currencySymbol: trip.baseCurrencySymbol,
+                            viewModel: viewModel
+                        )
+                    } else {
+                        UserBalanceRow(
+                            user: viewModel.currentUser,
+                            balance: calculateUserBalance(for: viewModel.currentUser.id),
+                            isCurrentUser: true,
+                            currencySymbol: trip.baseCurrencySymbol,
+                            viewModel: viewModel
+                        )
+                    }
+                }
+                
+                // Debts section
+                Section(header: Text("Who Owes What")) {
+                    // First show actual debts
+                    ForEach(debts, id: \.id) { debt in
+                        DebtRowView(
+                            debt: debt,
+                            currencySymbol: trip.baseCurrencySymbol,
+                            viewModel: viewModel
+                        )
+                    }
+                    
+                    // Then show participants with zero balance
+                    if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
+                        // Get all participants who don't appear in any debt
+                        let participantsInDebts = Set(debts.map { $0.from.id } + debts.map { $0.to.id })
+                        let settledParticipants = trip.participants.filter { participant in
+                            // Don't show current user in this list (they appear in "Your Balance" section)
+                            participant.id != currentUserInTrip.id && 
+                            !participantsInDebts.contains(participant.id)
+                        }
+                        
+                        // Display participants with zero balance
+                        ForEach(settledParticipants, id: \.id) { participant in
+                            SettledDebtRowView(
+                                participant: participant,
+                                currencySymbol: trip.baseCurrencySymbol
+                            )
+                        }
+                    }
+                }
+                
+                // Summary section
+                Section(header: Text("Summary")) {
+                    TotalSummaryView(trip: trip, currencySymbol: trip.baseCurrencySymbol)
+                }
+                
+                // Info section
+                Section {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.secondary)
+                        Text("All amounts shown in \(trip.baseCurrencyCode)")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
+            .listStyle(InsetGroupedListStyle())
             
-            // Debts section
-            Section(header: Text("Who Owes What")) {
-                ForEach(debts, id: \.id) { debt in
-                    DebtRowView(
-                        debt: debt,
-                        currencySymbol: trip.baseCurrencySymbol,
-                        viewModel: viewModel
-                    )
-                }
-            }
-            
-            // Summary section
-            Section(header: Text("Summary")) {
-                TotalSummaryView(trip: trip, currencySymbol: trip.baseCurrencySymbol)
-            }
-            
-            // Info section
-            Section {
+            // Record Payment Button
+            Button(action: {
+                showingRecordPaymentSheet = true
+            }) {
                 HStack {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.secondary)
-                    Text("All amounts shown in \(trip.baseCurrencyCode)")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                    Text("Record a Payment")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.accentColor)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .padding(.bottom)
+            }
+            .accessibilityLabel("Record a payment")
+            .sheet(isPresented: $showingRecordPaymentSheet) {
+                NavigationStack {
+                    RecordPaymentSheet(viewModel: viewModel)
                 }
             }
         }
-        .listStyle(InsetGroupedListStyle())
     }
     
     /// Calculate the total balance for a specific user
@@ -378,6 +480,35 @@ struct DebtRowView: View {
     }
 }
 
+/// Row displaying a participant with no debts (zero balance)
+struct SettledDebtRowView: View {
+    let participant: User
+    let currencySymbol: String
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(participant.name)
+                    .font(.headline)
+                
+                Text("all settled up")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Text("\(currencySymbol)0.00")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(participant.name) is all settled up, zero balance")
+    }
+}
+
 /// Summary view showing trip totals
 struct TotalSummaryView: View {
     let trip: Trip
@@ -429,6 +560,16 @@ struct TotalSummaryView: View {
     /// Calculate total trip cost (all converted to base currency)
     private func totalTripCost() -> Double {
         trip.expenses.reduce(0) { total, expense in
+            // Skip payment expenses (where one person paid and only one person has a share)
+            if expense.shares.count == 1 && expense.shares[0].user.id == expense.paidBy.id {
+                return total // Skip this expense as it's likely a payment
+            }
+            
+            // Skip explicit payment expenses (where one person paid and only one other person has a share)
+            if expense.shares.count == 1 && expense.shares[0].user.id != expense.paidBy.id && expense.description == "Payment" {
+                return total // Skip this expense as it's a payment
+            }
+            
             let expenseCurrency = expense.currencyCode ?? "USD"
             let convertedAmount = CurrencyConverterService.shared.convert(
                 amount: expense.amount,
