@@ -24,6 +24,9 @@ class TripViewModel: ObservableObject {
     @Published var potentialClaimableParticipants: [User] = []
     @Published var showParticipantClaimingView = false
     
+    // New property to track trips that need to be synced
+    @Published var pendingSync: [String: Trip] = [:]
+    
     // Firestore listeners
     private var tripListeners: [String: Any] = [:]
     var cancellables = Set<AnyCancellable>()
@@ -42,12 +45,39 @@ class TripViewModel: ObservableObject {
     }()
     
     // Initialize with the current user
-    init(currentUser: User) {
+    init(currentUser: User, trips: [Trip] = []) {
         self.currentUser = currentUser
+        self.trips = trips
+        
+        // Note: We don't need to initialize component managers here
+        // since they are already lazily initialized as properties
+        
+        // Subscribe to network connectivity changes
+        NetworkMonitor.shared.connectivityChangedPublisher
+            .sink { [weak self] isConnected in
+                guard let self = self else { return }
+                
+                if isConnected {
+                    print("Internet connection restored, syncing pending trips")
+                    // Try to sync any pending trips when back online
+                    self.syncPendingTrips()
+                } else {
+                    print("Internet connection lost, will queue operations for later sync")
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Load trips after everything is set up
         loadTrips()
     }
     
     // MARK: - Trip Management
+    
+    // Force refresh all trips from Firestore
+    func refreshTrips() {
+        print("Force refreshing all trips from Firestore")
+        loadTrips()
+    }
     
     func loadTrips() {
         isLoading = true
@@ -74,21 +104,32 @@ class TripViewModel: ObservableObject {
             if let error = error {
                 print("Error fetching trips: \(error.localizedDescription)")
                 self.errorMessage = "Error loading trips: \(error.localizedDescription)"
+                
+                // If we're offline, it's not a critical error, just show the cached data
+                if !NetworkMonitor.shared.isConnected {
+                    print("Working in offline mode with cached trips")
+                    // Remove error message for offline mode
+                    self.errorMessage = nil
+                }
+                
                 self.isLoading = false
                 return
             }
             
-            if let fetchedTrips = fetchedTrips, !fetchedTrips.isEmpty {
-                print("Loaded \(fetchedTrips.count) trips from Firestore")
-                self.trips = fetchedTrips
-                
-                // Set up listeners for all fetched trips
-                for trip in fetchedTrips {
-                    self.setupTripListener(for: trip.id)
-                }
-            } else {
-                print("No trips found for user")
-                self.trips = []
+            guard let fetchedTrips = fetchedTrips else {
+                self.errorMessage = "Error loading trips: No data returned"
+                self.isLoading = false
+                return
+            }
+            
+            print("Successfully loaded \(fetchedTrips.count) trips for user")
+            
+            // Replace local trips array with fetched trips
+            self.trips = fetchedTrips
+            
+            // Set up listeners for each trip
+            for trip in fetchedTrips {
+                self.setupTripListener(for: trip.id)
             }
             
             self.isLoading = false
@@ -199,26 +240,102 @@ class TripViewModel: ObservableObject {
             newTrip.participants.append(contentsOf: initialParticipants)
         }
         
-        // Save to Firestore
-        FirebaseService.shared.saveTrip(newTrip) { [weak self] success, error in
+        // Add trip to local state immediately
+        self.trips.append(newTrip)
+        self.currentTrip = newTrip
+        self.isLoading = false
+        
+        // Add to pending sync dictionary
+        pendingSync[newTrip.id] = newTrip
+        
+        // Try to save to Firestore
+        syncTripToFirebase(newTrip)
+    }
+    
+    // New method to sync a trip to Firebase
+    private func syncTripToFirebase(_ trip: Trip) {
+        FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
             guard let self = self else { return }
-            self.isLoading = false
-            
-            if let error = error {
-                self.errorMessage = "Error creating trip: \(error.localizedDescription)"
-                return
-            }
             
             if success {
-                self.trips.append(newTrip)
-                self.currentTrip = newTrip
-                self.setupTripListener(for: newTrip.id)
+                print("Trip successfully synced to Firestore: \(trip.id)")
+                // Remove from pending sync
+                self.pendingSync.removeValue(forKey: trip.id)
+                
+                // Set up real-time listener
+                self.setupTripListener(for: trip.id)
+            } else {
+                print("Failed to sync trip to Firestore: \(error?.localizedDescription ?? "Unknown error")")
+                // Keep in pending sync dictionary for later retry
+                self.pendingSync[trip.id] = trip
             }
+        }
+    }
+    
+    // New method to try syncing any pending trips
+    func syncPendingTrips() {
+        guard !pendingSync.isEmpty else { return }
+        
+        print("Attempting to sync \(pendingSync.count) pending trips")
+        
+        // Create a copy to iterate over while potentially modifying the original
+        let tripsToSync = pendingSync
+        
+        for (_, trip) in tripsToSync {
+            syncTripToFirebase(trip)
         }
     }
     
     func selectTrip(_ trip: Trip) {
         currentTrip = trip
+    }
+    
+    // Refresh the current trip data from Firebase
+    func refreshCurrentTrip(completion: ((Bool) -> Void)? = nil) {
+        guard let trip = currentTrip else {
+            print("No current trip to refresh")
+            completion?(false)
+            return
+        }
+        
+        print("TRIP REFRESH: Starting refresh for trip \(trip.name) (ID: \(trip.id)) with \(trip.expenses.count) expenses")
+        isLoading = true
+        
+        // Fetch the latest trip data from Firebase
+        FirebaseService.shared.fetchTrip(withId: trip.id) { [weak self] fetchedTrip, error in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                if let error = error {
+                    print("TRIP REFRESH ERROR: \(error.localizedDescription)")
+                    self.errorMessage = "Error refreshing data: \(error.localizedDescription)"
+                    completion?(false)
+                    return
+                }
+                
+                if let fetchedTrip = fetchedTrip {
+                    print("TRIP REFRESH SUCCESS: Trip \(fetchedTrip.name) refreshed with \(fetchedTrip.expenses.count) expenses")
+                    
+                    // Update trip in local array
+                    if let index = self.trips.firstIndex(where: { $0.id == trip.id }) {
+                        self.trips[index] = fetchedTrip
+                    } else {
+                        self.trips.append(fetchedTrip)
+                    }
+                    
+                    // Update current trip
+                    self.currentTrip = fetchedTrip
+                    
+                    completion?(true)
+                } else {
+                    print("TRIP REFRESH ERROR: Trip not found on server")
+                    self.errorMessage = "Trip not found on server"
+                    completion?(false)
+                }
+            }
+        }
     }
     
     // Internal helper to update a trip consistently
@@ -233,16 +350,13 @@ class TripViewModel: ObservableObject {
             currentTrip = trip
         }
         
-        // Save updated trip to Firestore
+        // Add to pending sync
+        pendingSync[trip.id] = trip
+        
+        // Try to save to Firestore
         isLoading = true
-        FirebaseService.shared.saveTrip(trip) { [weak self] success, error in
-            guard let self = self else { return }
-            self.isLoading = false
-            
-            if let error = error {
-                self.errorMessage = "Error updating trip: \(error.localizedDescription)"
-            }
-        }
+        syncTripToFirebase(trip)
+        isLoading = false
     }
     
     // Delete a trip by ID
@@ -267,30 +381,50 @@ class TripViewModel: ObservableObject {
     
     // Leave a trip - Remove the current user from participants
     func leaveTrip(trip: Trip) {
+        print(">>> LEAVE TRIP: Starting leave trip process for trip: \(trip.name) (ID: \(trip.id))")
         isLoading = true
         
         // Check if the user has any outstanding balances
         let canLeave = balanceCalculator.canLeaveTrip(trip)
+        print(">>> LEAVE TRIP: Can user leave? \(canLeave)")
         
         // If balance is not zero, user cannot leave
         if !canLeave {
             isLoading = false
             errorMessage = "You cannot leave the group until your balance is zero. Please settle all debts first."
+            print(">>> LEAVE TRIP: Cannot leave - user has outstanding balance")
             return
+        }
+        
+        // First remove the trip listener to prevent it from re-adding the trip
+        if let listener = tripListeners[trip.id] {
+            print(">>> LEAVE TRIP: Removing listener for trip: \(trip.id)")
+            FirebaseService.shared.stopListening(listener: listener)
+            tripListeners.removeValue(forKey: trip.id)
         }
         
         // Create a copy of the trip without the current user
         var updatedTrip = trip
         
+        print(">>> LEAVE TRIP: Current user ID: \(currentUser.id)")
+        print(">>> LEAVE TRIP: Original participants count: \(trip.participants.count)")
+        
         // Remove the current user from participants
         // We need to check for both direct ID match and claimed participant match
-        updatedTrip.participants.removeAll(where: { 
-            $0.id == currentUser.id || $0.claimedByUserId == currentUser.id 
+        updatedTrip.participants.removeAll(where: { participant in
+            let removed = participant.id == currentUser.id || participant.claimedByUserId == currentUser.id
+            if removed {
+                print(">>> LEAVE TRIP: Removing participant: \(participant.name) (ID: \(participant.id), claimed by: \(participant.claimedByUserId ?? "none"))")
+            }
+            return removed
         })
+        
+        print(">>> LEAVE TRIP: Updated participants count: \(updatedTrip.participants.count)")
         
         // If this results in an empty trip, we should delete the trip
         if updatedTrip.participants.isEmpty {
             // Delete the trip entirely
+            print(">>> LEAVE TRIP: Trip is now empty, deleting trip")
             deleteTrip(withId: trip.id)
             isLoading = false
             return
@@ -298,27 +432,43 @@ class TripViewModel: ObservableObject {
         
         // Update local array first
         // Remove the trip from our local trips array since we're no longer in it
+        let originalTripsCount = self.trips.count
         self.trips.removeAll(where: { $0.id == trip.id })
+        print(">>> LEAVE TRIP: Removed trip from local array. Before: \(originalTripsCount), After: \(self.trips.count)")
+        
+        // Also remove the trip from pendingSync if it's there
+        pendingSync.removeValue(forKey: trip.id)
         
         // Clear current trip if it was the one we left
         if currentTrip?.id == trip.id {
+            print(">>> LEAVE TRIP: Clearing current trip as it was the one we left")
             currentTrip = nil
         }
         
         // Save the updated trip to Firestore (with the user removed)
+        print(">>> LEAVE TRIP: Saving updated trip to Firestore")
         FirebaseService.shared.saveTrip(updatedTrip) { [weak self] success, error in
-            guard let self = self else { return }
+            guard let self = self else { 
+                print(">>> LEAVE TRIP: Self is nil in completion handler")
+                return 
+            }
             self.isLoading = false
             
             if let error = error {
+                print(">>> LEAVE TRIP ERROR: \(error.localizedDescription)")
                 self.errorMessage = "Error leaving trip: \(error.localizedDescription)"
                 
-                // Add the trip back to our local array if there was an error
+                // Since we already removed the listener, we don't need to worry about the trip being re-added automatically.
+                // However, we should manually add it back in case of error
                 if !self.trips.contains(where: { $0.id == trip.id }) {
+                    print(">>> LEAVE TRIP: Adding trip back to local array due to error")
                     self.trips.append(trip)
+                    
+                    // Re-establish the listener
+                    self.setupTripListener(for: trip.id)
                 }
             } else {
-                print("Successfully left trip: \(trip.name)")
+                print(">>> LEAVE TRIP SUCCESS: Successfully left trip: \(trip.name)")
             }
         }
     }
@@ -361,6 +511,21 @@ class TripViewModel: ObservableObject {
         return participantManager.removeParticipant(participant)
     }
     
+    func canRemoveParticipant(_ participant: User) -> Bool {
+        // Can't remove self
+        if participant.id == currentUser.id || participant.claimedByUserId == currentUser.id {
+            return false
+        }
+        
+        // Need a current trip
+        guard let trip = currentTrip else {
+            return false
+        }
+        
+        // Check for balance
+        return balanceCalculator.isParticipantBalanceZero(participant, in: trip)
+    }
+    
     func claimParticipant(_ participant: User) {
         participantManager.claimParticipant(participant)
     }
@@ -373,8 +538,8 @@ class TripViewModel: ObservableObject {
         return participantManager.getUnclaimedParticipants(in: trip)
     }
     
-    func getPreviousParticipants() -> [User] {
-        return participantManager.getPreviousParticipants()
+    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [User] {
+        return participantManager.getPreviousParticipants(excludingParticipantsFrom: trip)
     }
     
     // MARK: - Balance Calculation Delegation

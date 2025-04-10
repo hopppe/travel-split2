@@ -30,19 +30,45 @@ struct ParticipantsView: View {
                         ForEach(trip.participants) { participant in
                             ParticipantRowView(
                                 participant: participant,
-                                isCurrentUser: participant.id == viewModel.currentUser.id
+                                isCurrentUser: isCurrentUser(participant)
                             )
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(buildAccessibilityLabel(for: participant))
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 // Don't show remove button for current user
                                 if !isCurrentUser(participant) {
-                                    Button("Remove", role: .destructive) {
+                                    Button(role: .destructive) {
                                         participantToRemove = participant
                                         handleRemoveParticipant(participant)
+                                    } label: {
+                                        Label("Remove", systemImage: "person.badge.minus")
+                                    }
+                                    .tint(.red)
+                                }
+                            }
+                            .contextMenu {
+                                if !isCurrentUser(participant) {
+                                    Button(role: .destructive) {
+                                        participantToRemove = participant
+                                        handleRemoveParticipant(participant)
+                                    } label: {
+                                        Label("Remove Participant", systemImage: "person.badge.minus")
+                                    }
+                                }
+                                
+                                // Share option if participant is unclaimed
+                                if !participant.isClaimed {
+                                    Button {
+                                        shareTrip()
+                                    } label: {
+                                        Label("Share Invite Link", systemImage: "square.and.arrow.up")
                                     }
                                 }
                             }
+                            .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .contentShape(Rectangle())
+                            .accessibilityHint(!isCurrentUser(participant) ? "Swipe left to remove, or long press for options" : "")
                         }
                     }
                     
@@ -83,6 +109,8 @@ struct ParticipantsView: View {
                             .padding(.top, 4)
                     }
                 }
+                .listStyle(InsetGroupedListStyle())
+                .environment(\.defaultMinListRowHeight, 64)
             }
         }
         .alert("Cannot Remove Participant", isPresented: $showingBalanceWarning) {
@@ -96,6 +124,29 @@ struct ParticipantsView: View {
                 Text("Participants with outstanding balances cannot be removed.")
             }
         }
+        .confirmationDialog(
+            "Remove Participant",
+            isPresented: $showingRemoveConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                if let participant = participantToRemove {
+                    // This will be handled by viewModel.removeParticipantFromCurrentTrip
+                    let _ = viewModel.removeParticipantFromCurrentTrip(participant)
+                    participantToRemove = nil
+                }
+            }
+            
+            Button("Cancel", role: .cancel) {
+                participantToRemove = nil
+            }
+        } message: {
+            if let participant = participantToRemove {
+                Text("Are you sure you want to remove \(participant.name) from this group?")
+            } else {
+                Text("Are you sure you want to remove this participant?")
+            }
+        }
     }
     
     // MARK: - Helper Properties and Methods
@@ -107,10 +158,11 @@ struct ParticipantsView: View {
     
     /// Handle the remove participant action
     private func handleRemoveParticipant(_ participant: User) {
-        // Try to remove participant
-        let success = viewModel.removeParticipantFromCurrentTrip(participant)
-        
-        if !success {
+        // Check if participant can be removed (no outstanding balance)
+        if viewModel.canRemoveParticipant(participant) {
+            // Show confirmation dialog
+            showingRemoveConfirmation = true
+        } else {
             // Participant has balance, show warning
             showingBalanceWarning = true
         }
@@ -132,7 +184,7 @@ struct ParticipantsView: View {
         
         if !participant.isClaimed {
             label += ", placeholder participant"
-        } else if participant.id == viewModel.currentUser.id {
+        } else if isCurrentUser(participant) {
             label += ", you"
         }
         
@@ -211,8 +263,17 @@ struct ParticipantRowView: View {
             }
             
             Spacer()
+            
+            // Add a subtle indicator for non-current users
+            if !isCurrentUser {
+                Image(systemName: "chevron.left")
+                    .font(.caption)
+                    .foregroundColor(.secondary.opacity(0.5))
+            }
         }
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, minHeight: 60) // Ensure minimum height for better touch target
+        .contentShape(Rectangle()) // Make entire area tappable
+        .background(Color.clear)
     }
 }
 

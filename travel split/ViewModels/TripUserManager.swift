@@ -69,8 +69,33 @@ class TripUserManager {
             // Save the Firebase ID to UserDefaults
             UserDefaults.standard.set(userId, forKey: "user_id")
             
-            // Get the user's name and email from UserDefaults, or default values
-            let userName = UserDefaults.standard.string(forKey: "user_name") ?? "You"
+            // Get the user's name with better priority order:
+            // 1. Firebase display name
+            // 2. Saved name in UserDefaults
+            // 3. "You" only as last resort
+            let userName: String
+            if let displayName = firebaseUser.displayName, !displayName.isEmpty {
+                userName = displayName
+            } else {
+                let savedName = UserDefaults.standard.string(forKey: "user_name")
+                if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
+                    userName = savedName
+                    
+                    // Also update Firebase with this name to maintain consistency
+                    let changeRequest = firebaseUser.createProfileChangeRequest()
+                    changeRequest.displayName = savedName
+                    changeRequest.commitChanges { error in
+                        if let error = error {
+                            print("Error updating Firebase display name: \(error)")
+                        } else {
+                            print("Successfully synced UserDefaults name to Firebase: \(savedName)")
+                        }
+                    }
+                } else {
+                    userName = "You"
+                }
+            }
+            
             let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
             
             // Create a user with the Firebase ID
@@ -82,7 +107,8 @@ class TripUserManager {
         
         // Check if we have a previously saved user ID
         if let savedUserId = UserDefaults.standard.string(forKey: "user_id") {
-            let userName = UserDefaults.standard.string(forKey: "user_name") ?? "You"
+            let savedName = UserDefaults.standard.string(forKey: "user_name")
+            let userName = (savedName != nil && !savedName!.isEmpty && savedName != "You") ? savedName! : "You"
             let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
             
             // Create a temporary user with the saved ID
@@ -100,34 +126,36 @@ class TripUserManager {
     
     // Helper function for signing in anonymously if needed
     func signInAnonymouslyIfNeeded(completion: @escaping () -> Void) {
+        // Check current auth state
+        let currentUser = Auth.auth().currentUser
+        print("Current auth state before signInAnonymouslyIfNeeded: \(currentUser?.uid ?? "none")")
+        
         // Use the Firebase service to sign in
         if FirebaseService.shared.isAuthenticated {
             // Already authenticated - proceed
+            print("Already authenticated, using existing Firebase user")
+            
+            // Still ensure IDs are consistent
+            if let firebaseUserId = FirebaseService.shared.getCurrentUserId(),
+               tripViewModel.currentUser.id != firebaseUserId {
+                print("Correcting user ID from \(tripViewModel.currentUser.id) to \(firebaseUserId)")
+                var updatedUser = tripViewModel.currentUser
+                updatedUser.id = firebaseUserId
+                tripViewModel.currentUser = updatedUser
+                UserDefaults.standard.set(firebaseUserId, forKey: "user_id")
+            }
+            
             completion()
             return
         }
         
-        // Not authenticated - sign in first
-        FirebaseService.shared.signInAnonymously { [weak self] success, error in
-            if success {
-                // If authentication was successful, update the current user if needed
-                if let firebaseUserId = FirebaseService.shared.getCurrentUserId(),
-                   self?.tripViewModel.currentUser.id != firebaseUserId {
-                    // Update the current user with the Firebase ID
-                    var updatedUser = self?.tripViewModel.currentUser ?? User(id: firebaseUserId, name: "You", email: "")
-                    updatedUser.id = firebaseUserId
-                    self?.tripViewModel.currentUser = updatedUser
-                    
-                    // Update UserDefaults with the Firebase ID
-                    UserDefaults.standard.set(firebaseUserId, forKey: "user_id")
-                }
-            } else {
-                print("Failed to sign in anonymously: \(error?.localizedDescription ?? "Unknown error")")
-            }
-            
-            // Proceed with the completion regardless of success - we'll work with what we have
-            completion()
-        }
+        // Not authenticated - but don't create anonymous user automatically
+        // This prevents random creation of anonymous users
+        print("Not authenticated, but NOT creating anonymous user automatically")
+        print("Anonymous sign-in should only happen at welcome/login screen")
+        
+        // Continue with the existing user ID instead of creating a new one
+        completion()
     }
     
     // Make sure the user ID is consistent with Firebase

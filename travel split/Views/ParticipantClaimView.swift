@@ -92,12 +92,31 @@ struct ParticipantClaimView: View {
     
     // Handle completion of joining a trip - dismiss all sheets
     private func completeJoining() {
-        // Reset the view state using property wrapper syntax for published properties
+        // Make sure we have a current trip
+        guard let trip = viewModel.currentTrip else {
+            // If no trip, just dismiss
+            DispatchQueue.main.async {
+                self.viewModel.showParticipantClaimingView = false
+                self.viewModel.potentialClaimableParticipants = []
+                self.dismiss()
+            }
+            return
+        }
+        
+        // Set the current trip
+        viewModel.selectTrip(trip)
+        
+        // Post a notification to tell the app to navigate to the trip detail view
+        NotificationCenter.default.post(
+            name: NSNotification.Name("NavigateToTripDetail"),
+            object: nil,
+            userInfo: ["tripId": trip.id]
+        )
+        
+        // Reset the view state and dismiss
         DispatchQueue.main.async {
             self.viewModel.showParticipantClaimingView = false
             self.viewModel.potentialClaimableParticipants = []
-            
-            // Dismiss this view
             self.dismiss()
         }
     }

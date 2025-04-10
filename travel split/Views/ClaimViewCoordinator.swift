@@ -14,7 +14,7 @@ struct ClaimViewCoordinator: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if let trip = viewModel.currentTrip, !viewModel.potentialClaimableParticipants.isEmpty {
+                if let _ = viewModel.currentTrip, !viewModel.potentialClaimableParticipants.isEmpty {
                     Text("Select a participant to join as")
                         .font(.headline)
                         .padding()
@@ -116,16 +116,19 @@ struct ClaimViewCoordinator: View {
         // Set the current trip (even though it's already set, this ensures it remains selected)
         viewModel.selectTrip(trip)
         
+        // Post a notification to tell the app to navigate to the trip detail view
+        NotificationCenter.default.post(
+            name: NSNotification.Name("NavigateToTripDetail"),
+            object: nil,
+            userInfo: ["tripId": trip.id]
+        )
+        
         // Reset the view state
         viewModel.showParticipantClaimingView = false
         viewModel.potentialClaimableParticipants = []
         
         // Dismiss this view
         showClaimSheet = false
-        
-        // The navigation to expense screen happens automatically because:
-        // 1. We've set the currentTrip in the viewModel
-        // 2. The TripDetailView will show when a trip is selected, with expenses tab selected by default
     }
     
     // Handle cancellation of joining a trip

@@ -79,6 +79,45 @@ class TripBalanceCalculator {
         return abs(balance) < 0.01 // Using a small epsilon for floating-point comparison
     }
     
+    // Check if a specific participant has a zero balance
+    func isParticipantBalanceZero(_ participant: User, in trip: Trip) -> Bool {
+        // Calculate what this participant has paid and what they owe
+        var balance: Double = 0
+        
+        for expense in trip.expenses {
+            // Get expense amount converted to the trip's base currency
+            let expenseCurrency = expense.currencyCode ?? trip.baseCurrencyCode
+            let convertedAmount = CurrencyConverterService.shared.convert(
+                amount: expense.amount,
+                from: expenseCurrency,
+                to: trip.baseCurrencyCode
+            )
+            
+            // Check if participant paid for this expense
+            if expense.paidBy.id == participant.id {
+                // Participant paid, so they're owed money
+                balance += convertedAmount
+            }
+            
+            // Check how much participant owes for this expense
+            for share in expense.shares {
+                if share.user.id == participant.id {
+                    // Convert the share amount to trip's base currency
+                    let convertedShareAmount = CurrencyConverterService.shared.convert(
+                        amount: share.amount,
+                        from: expenseCurrency,
+                        to: trip.baseCurrencyCode
+                    )
+                    
+                    // Participant has a share in this expense, reduce balance
+                    balance -= convertedShareAmount
+                }
+            }
+        }
+        
+        return abs(balance) < 0.01 // Using a small epsilon for floating-point comparison
+    }
+    
     // Get user's balance in a trip with proper formatting
     func getUserBalanceString(_ trip: Trip) -> String {
         let balance = getUserBalance(in: trip)

@@ -16,6 +16,7 @@ struct UserProfileView: View {
     @State private var showSignUp = false
     @State private var isInitialSetup: Bool
     @State private var isAnonymousUser = true
+    @State private var authListener: AuthStateDidChangeListenerHandle?
     
     init(tripViewModel: TripViewModel, isInitialSetup: Bool = false) {
         self.tripViewModel = tripViewModel
@@ -88,6 +89,46 @@ struct UserProfileView: View {
             }
             .onAppear {
                 refreshUserState()
+                // Add auth state listener when view appears
+                authListener = Auth.auth().addStateDidChangeListener { (auth, user) in
+                    DispatchQueue.main.async {
+                        self.refreshUserState()
+                    }
+                }
+                
+                // Add notification observer for authentication changes
+                NotificationCenter.default.addObserver(
+                    forName: NSNotification.Name("AuthenticationDidChange"),
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    self.refreshUserState()
+                }
+            }
+            .onDisappear {
+                // Remove auth state listener when view disappears
+                if let authListener = authListener {
+                    Auth.auth().removeStateDidChangeListener(authListener)
+                }
+                
+                // Remove notification observer
+                NotificationCenter.default.removeObserver(
+                    self,
+                    name: NSNotification.Name("AuthenticationDidChange"),
+                    object: nil
+                )
+            }
+            .onChange(of: showSignIn) { isPresented in
+                if !isPresented {
+                    // Refresh when Sign In sheet is dismissed
+                    refreshUserState()
+                }
+            }
+            .onChange(of: showSignUp) { isPresented in
+                if !isPresented {
+                    // Refresh when Sign Up sheet is dismissed 
+                    refreshUserState()
+                }
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
@@ -110,23 +151,62 @@ struct UserProfileView: View {
         if let firebaseUser = Auth.auth().currentUser {
             isAnonymousUser = firebaseUser.isAnonymous
             
+            // First determine if we're dealing with a logged-in user with email
             if let email = firebaseUser.email, !email.isEmpty {
                 userEmail = email
                 
+                // For the name, use priority order:
+                // 1. Firebase display name
+                // 2. Current name in the UI (if not default)
+                // 3. Current user model name
+                // 4. Default to existing value
                 if let displayName = firebaseUser.displayName, !displayName.isEmpty {
                     userName = displayName
-                } else {
-                    userName = tripViewModel.currentUser.name
+                } else if userName.isEmpty || userName == "You" {
+                    // Only update if current name is empty or default
+                    if tripViewModel.currentUser.name != "You" {
+                        userName = tripViewModel.currentUser.name
+                    }
                 }
+                // Otherwise keep existing name in the field
             } else {
+                // Anonymous user
                 isAnonymousUser = true
-                userName = tripViewModel.currentUser.name
+                
+                // For anonymous users, preserve their custom name if they set one
+                if userName.isEmpty || userName == "You" {
+                    // If current profile name is empty or default "You",
+                    // check if the model has a custom name
+                    if tripViewModel.currentUser.name != "You" {
+                        userName = tripViewModel.currentUser.name
+                    } else {
+                        // Try to get name from Firebase
+                        if let displayName = firebaseUser.displayName, !displayName.isEmpty {
+                            userName = displayName
+                        } else {
+                            // Last resort - keep current value or use model default
+                            if userName.isEmpty {
+                                userName = tripViewModel.currentUser.name
+                            }
+                        }
+                    }
+                }
+                // Otherwise keep existing name in the field
+                
                 userEmail = ""
             }
         } else {
+            // No Firebase user at all - keep using existing data
             isAnonymousUser = true
-            userName = tripViewModel.currentUser.name
-            userEmail = tripViewModel.currentUser.email
+            
+            // Only update if current UI value is empty
+            if userName.isEmpty {
+                userName = tripViewModel.currentUser.name
+            }
+            
+            if userEmail.isEmpty {
+                userEmail = tripViewModel.currentUser.email
+            }
         }
         
         print("Profile refreshed: name=\(userName), email=\(userEmail), anonymous=\(isAnonymousUser)")

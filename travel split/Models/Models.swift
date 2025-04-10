@@ -18,7 +18,16 @@ struct User: Identifiable, Codable, Equatable, Hashable {
     
     // For creating a new user (a claimed user - real app user)
     static func create(name: String, email: String) -> User {
-        return User(id: UUID().uuidString, name: name, email: email, profileImage: nil, isClaimed: true)
+        // Try to get Firebase ID if available
+        if let firebaseUserId = FirebaseService.shared.getCurrentUserId() {
+            print("Creating user with Firebase ID: \(firebaseUserId)")
+            return User(id: firebaseUserId, name: name, email: email, profileImage: nil, isClaimed: true)
+        } else {
+            // Fall back to UUID if no Firebase ID is available
+            let uuid = UUID().uuidString
+            print("Creating user with UUID: \(uuid) (no Firebase ID available)")
+            return User(id: uuid, name: name, email: email, profileImage: nil, isClaimed: true)
+        }
     }
     
     // For creating a placeholder participant that can be claimed later

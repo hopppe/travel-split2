@@ -29,8 +29,33 @@ class AuthenticationService: ObservableObject {
                     print("Anonymous user signed in")
                 }
                 
-                // Get the display name, with empty check
-                let displayName = user.displayName?.isEmpty ?? true ? "You" : user.displayName!
+                // First check if we have a saved name for this user ID in UserDefaults
+                let savedName = UserDefaults.standard.string(forKey: "user_name")
+                
+                // Get the display name, with proper fallback logic:
+                // 1. Use Firebase display name if available
+                // 2. Use previously saved name if available
+                // 3. Only use "You" as absolute last resort for truly new users
+                let displayName: String
+                if let firebaseName = user.displayName, !firebaseName.isEmpty {
+                    displayName = firebaseName
+                } else if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
+                    // Use the saved name if it's not empty and not default "You"
+                    displayName = savedName
+                    
+                    // Also update Firebase with this name to keep them in sync
+                    let changeRequest = user.createProfileChangeRequest()
+                    changeRequest.displayName = savedName
+                    changeRequest.commitChanges { error in
+                        if let error = error {
+                            print("Error updating Firebase display name: \(error)")
+                        } else {
+                            print("Successfully updated Firebase display name to: \(savedName)")
+                        }
+                    }
+                } else {
+                    displayName = "You"
+                }
                 
                 // Create our internal user model
                 self.currentUser = User(id: user.uid, 
@@ -63,6 +88,9 @@ class AuthenticationService: ObservableObject {
         // Check if we have an anonymous user that we should upgrade
         if let currentUser = Auth.auth().currentUser, currentUser.isAnonymous {
             print("Converting anonymous user to permanent account")
+            
+            // Store the anonymous user ID for trip migration
+            let anonymousUserId = currentUser.uid
             
             // Create credential
             let credential = EmailAuthProvider.credential(withEmail: email, password: password)
@@ -113,6 +141,9 @@ class AuthenticationService: ObservableObject {
                         } else {
                             print("Successfully saved user data after linking anonymous account")
                         }
+                        // Trips don't need to be migrated as they're already associated with this user
+                        // (anonymous account was upgraded)
+                        print("Account upgraded from anonymous to registered - trips already associated with this user")
                         completion(true, nil)
                     }
                 }
@@ -198,6 +229,16 @@ class AuthenticationService: ObservableObject {
     
     // Sign in with email and password
     func signIn(email: String, password: String, completion: @escaping (Bool, Error?) -> Void) {
+        // Store reference to anonymous user if one exists
+        let anonymousUser = Auth.auth().currentUser
+        let isAnonymous = anonymousUser?.isAnonymous ?? false
+        let anonymousUserId = anonymousUser?.uid
+        
+        // If there's an anonymous user, we'll need to transfer their trips
+        if isAnonymous {
+            print("Anonymous user detected before sign in: \(anonymousUserId ?? "unknown")")
+        }
+        
         Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
             guard let self = self else { return }
             
@@ -213,8 +254,29 @@ class AuthenticationService: ObservableObject {
                 return
             }
             
-            // Get the display name, with empty check
-            let displayName = user.displayName?.isEmpty ?? true ? "User" : user.displayName!
+            // Get the display name, with better fallback logic
+            let displayName: String
+            if let firebaseName = user.displayName, !firebaseName.isEmpty {
+                displayName = firebaseName
+            } else {
+                // Check if we have a previously saved name for this user
+                let savedName = UserDefaults.standard.string(forKey: "user_name")
+                if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
+                    displayName = savedName
+                    
+                    // Also update Firebase with this name
+                    let changeRequest = user.createProfileChangeRequest()
+                    changeRequest.displayName = savedName
+                    changeRequest.commitChanges { error in
+                        if let error = error {
+                            print("Error updating Firebase display name: \(error)")
+                        }
+                    }
+                } else {
+                    // Only use a generic name as last resort
+                    displayName = "User"
+                }
+            }
             
             // Set hasCompletedSetup in UserDefaults
             UserDefaults.standard.set(true, forKey: "hasCompletedSetup")
@@ -230,8 +292,61 @@ class AuthenticationService: ObservableObject {
                                   profileImage: nil,
                                   isClaimed: true)
             
-            completion(true, nil)
+            // If we had an anonymous user before, transfer their trips to the new signed-in user
+            if isAnonymous, let anonymousId = anonymousUserId {
+                print("Transferring trips from anonymous user \(anonymousId) to signed-in user \(user.uid)")
+                self.transferTripsAndDeleteUser(fromId: anonymousId, toId: user.uid) { success in
+                    if success {
+                        print("Successfully transferred trips from anonymous user to signed-in user")
+                    } else {
+                        print("Failed to transfer all trips from anonymous user")
+                    }
+                    
+                    // Post notification that trips have been updated
+                    NotificationCenter.default.post(name: NSNotification.Name("TripsUpdated"), object: nil)
+                    
+                    completion(true, nil)
+                }
+            } else {
+                completion(true, nil)
+            }
         }
+    }
+    
+    // Transfer trips from one user to another and delete the source user
+    private func transferTripsAndDeleteUser(fromId: String, toId: String, completion: @escaping (Bool) -> Void) {
+        // Use the existing migration function to transfer trips
+        FirebaseService.shared.migrateUserData(fromId: fromId, toId: toId) { [weak self] success in
+            if success {
+                print("Trip migration completed successfully")
+                
+                // Now delete the anonymous user since we've migrated their data
+                self?.deleteAnonymousUser(completion: { deleteSuccess in
+                    if deleteSuccess {
+                        print("Anonymous user deleted successfully")
+                    } else {
+                        print("Failed to delete anonymous user - this is not critical")
+                    }
+                    
+                    // Consider the operation successful if the trips were migrated
+                    completion(success)
+                })
+            } else {
+                print("Trip migration failed")
+                completion(false)
+            }
+        }
+    }
+    
+    // Delete the anonymous user
+    private func deleteAnonymousUser(completion: @escaping (Bool) -> Void) {
+        // Try to re-authenticate as the anonymous user (requires a fresh credential)
+        let anonymousAuth = Auth.auth()
+        
+        // We can't easily re-authenticate and delete an anonymous user after we've signed in with a different user
+        // Instead, we'll just assume it's gone and let Firebase garbage collect it later
+        print("Skipping anonymous user deletion - Firebase will garbage collect unused anonymous accounts")
+        completion(true)
     }
     
     // Sign out

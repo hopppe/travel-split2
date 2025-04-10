@@ -52,11 +52,61 @@ class TripParticipantManager {
             return
         }
         
-        // Add user to trip
-        trip.participants.append(user)
+        // Create a copy of the user to potentially modify
+        var userToAdd = user
         
-        // Update trip in the view model
-        tripViewModel.updateTrip(trip)
+        // If this is a real user (not an unclaimed placeholder), ensure they're added to the trip on their device
+        // We identify real users by the isClaimed flag
+        if userToAdd.isClaimed {
+            print("Adding real user to trip: \(userToAdd.name) (ID: \(userToAdd.id))")
+            
+            // Special handling for users with 'unclaimed_' IDs that have been claimed
+            // This is a critical case: the user was once a placeholder but is now claimed
+            if userToAdd.id.hasPrefix("unclaimed_") {
+                print("Detected previously unclaimed user that is now claimed")
+                
+                // Check if the claimedByUserId is set, which is the Firebase ID of the user who claimed it
+                if let claimedById = userToAdd.claimedByUserId, !claimedById.isEmpty, !claimedById.contains("-") {
+                    print("Using claimedByUserId as the real Firebase ID: \(claimedById)")
+                    // Use the claimedByUserId as the Firebase ID, which is unique to the user
+                    userToAdd.id = claimedById
+                } else {
+                    // Add a unique suffix to ensure we don't have duplicate IDs
+                    // This is a fallback case - the ID is still not ideal but at least it's unique
+                    userToAdd.id += "_added_\(UUID().uuidString.prefix(8))"
+                    print("Using modified ID to ensure uniqueness: \(userToAdd.id)")
+                }
+            }
+            
+            // Check if the user ID looks like a Firebase ID (not a UUID)
+            // Firebase IDs don't contain hyphens, while UUIDs do
+            if userToAdd.id.contains("-") {
+                print("Warning: User ID appears to be a UUID, not a Firebase ID: \(userToAdd.id)")
+                print("Previous participants may be using local UUIDs instead of Firebase IDs")
+            }
+            
+            // Make a final uniqueness check to avoid duplicate IDs
+            if trip.participants.contains(where: { $0.id == userToAdd.id }) {
+                print("⚠️ Potential duplicate ID detected - adding unique suffix")
+                userToAdd.id += "_unique_\(UUID().uuidString.prefix(8))"
+            }
+            
+            // Add user to trip with potentially corrected ID
+            trip.participants.append(userToAdd)
+            
+            // Update trip in the view model
+            tripViewModel.updateTrip(trip)
+            
+            // Print participants to check proper updating
+            print("Trip now has \(trip.participants.count) participants:")
+            for (index, p) in trip.participants.enumerated() {
+                print("  \(index): \(p.name) (ID: \(p.id), isClaimed: \(p.isClaimed))")
+            }
+        } else {
+            // For unclaimed participants, just add them to the trip
+            trip.participants.append(userToAdd)
+            tripViewModel.updateTrip(trip)
+        }
     }
     
     // Remove a participant from the current trip
@@ -162,6 +212,7 @@ class TripParticipantManager {
         var updatedParticipant = participant
         updatedParticipant.isClaimed = true
         updatedParticipant.claimedByUserId = tripViewModel.currentUser.id
+        updatedParticipant.name = tripViewModel.currentUser.name // Update name to current user's name
         
         // Update the participant in the trip
         trip.participants[participantIndex] = updatedParticipant
@@ -204,19 +255,37 @@ class TripParticipantManager {
     }
     
     // Get previous participants from all trips
-    func getPreviousParticipants() -> [User] {
+    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [User] {
         var allParticipants: [User] = []
         var uniqueParticipantIds = Set<String>()
         let currentUser = tripViewModel.currentUser
         
+        print("Getting previous participants (excluding from trip: \(trip?.id ?? "none"))")
+        
         // Collect participants from all trips, excluding the current user
-        for trip in tripViewModel.trips {
-            let otherParticipants = trip.participants.filter { $0.id != currentUser.id }
+        for tripItem in tripViewModel.trips {
+            let otherParticipants = tripItem.participants.filter { participant in
+                // Exclude current user
+                participant.id != currentUser.id && 
+                // Only include claimed participants (not placeholders)
+                participant.isClaimed &&
+                // If a trip is provided, exclude participants already in that trip
+                (trip == nil || !(trip?.participants.contains(where: { $0.id == participant.id }) ?? false))
+            }
             
             for participant in otherParticipants {
                 // Only add participants that haven't been added yet
                 if !uniqueParticipantIds.contains(participant.id) {
                     uniqueParticipantIds.insert(participant.id)
+                    
+                    // Check if this participant has a Firebase-style ID or a UUID
+                    // For debugging purposes
+                    if participant.id.contains("-") {
+                        print("Previous participant with UUID-style ID: \(participant.name) (ID: \(participant.id))")
+                    } else {
+                        print("Previous participant with Firebase-style ID: \(participant.name) (ID: \(participant.id))")
+                    }
+                    
                     allParticipants.append(participant)
                 }
             }
@@ -225,7 +294,10 @@ class TripParticipantManager {
         // Sort by most recently added (assuming trips are in chronological order)
         // and limit to 12 participants max
         let sortedParticipants = allParticipants.reversed()
-        return Array(sortedParticipants.prefix(12))
+        let result = Array(sortedParticipants.prefix(12))
+        
+        print("Found \(result.count) previous participants to display")
+        return result
     }
     
     // Helper for participant claiming UI

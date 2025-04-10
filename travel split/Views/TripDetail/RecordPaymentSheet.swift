@@ -251,7 +251,7 @@ struct RecordPaymentSheet: View {
     
     /// Check if the current user has any debts to settle
     private func userHasNoBalances() -> Bool {
-        guard let trip = viewModel.currentTrip,
+        guard let _ = viewModel.currentTrip,
               let currentUser = viewModel.findCurrentUserInTrip() else {
             return true
         }

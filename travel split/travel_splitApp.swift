@@ -27,8 +27,14 @@ struct TravelSplitApp: App {
     
     // Initialize Firebase first
     init() {
+        // Ensure anonymous auth is allowed by default
+        UserDefaults.standard.register(defaults: ["allowAnonymousAuth": true])
+        
         // Note: Firebase is configured in AppDelegate, don't configure it again here
         print("TravelSplitApp initialized")
+        
+        // Start network monitoring
+        _ = NetworkMonitor.shared
         
         // Don't access Auth directly in the initializer; use a slight delay to ensure
         // the AppDelegate has had time to configure Firebase
@@ -43,6 +49,9 @@ struct TravelSplitApp: App {
                     print("User has email: \(email), marking as real user")
                     // Disable anonymous auth since we have a real user
                     allowAnonymousAuth = false
+                } else {
+                    // Ensure anonymous auth is enabled for anonymous users
+                    allowAnonymousAuth = true
                 }
                 
                 // Store values in UserDefaults, but don't modify self directly here
@@ -56,6 +65,10 @@ struct TravelSplitApp: App {
             } else {
                 // No Firebase user at startup - show welcome screen
                 print("No Firebase user at startup, showing welcome screen")
+                // Ensure anonymous auth is enabled for new users
+                allowAnonymousAuth = true
+                UserDefaults.standard.set(true, forKey: "allowAnonymousAuth")
+                
                 DispatchQueue.main.async {
                     hasCompletedSetup = false
                 }
@@ -65,7 +78,8 @@ struct TravelSplitApp: App {
     
     // Create the view model with current user
     @StateObject private var tripViewModel = TripViewModel(
-        currentUser: TripViewModel.loadOrCreateUser()
+        currentUser: TripViewModel.loadOrCreateUser(),
+        trips: []
     )
     
     // For handling deep links
@@ -135,6 +149,15 @@ struct TravelSplitApp: App {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // Reset the trip view model
                 self.tripViewModel.reset()
+            }
+        }
+        
+        // Add observer for trips updated notification
+        NotificationCenter.default.addObserver(forName: NSNotification.Name("TripsUpdated"), object: nil, queue: .main) { [self] _ in
+            print("Received trips updated notification - refreshing trips")
+            DispatchQueue.main.async {
+                // Force refresh all trips from Firebase
+                self.tripViewModel.refreshTrips()
             }
         }
         

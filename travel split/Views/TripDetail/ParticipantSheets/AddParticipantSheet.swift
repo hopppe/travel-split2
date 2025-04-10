@@ -148,8 +148,12 @@ struct AddParticipantSheet: View {
                 }
             }
             .onAppear {
-                // Load previous participants when the view appears
-                previousParticipants = viewModel.getPreviousParticipants()
+                // Load previous participants when the view appears, excluding those already in the current trip
+                if let currentTrip = viewModel.currentTrip {
+                    previousParticipants = viewModel.getPreviousParticipants(excludingParticipantsFrom: currentTrip)
+                } else {
+                    previousParticipants = viewModel.getPreviousParticipants()
+                }
             }
         }
     }
@@ -191,9 +195,38 @@ struct AddParticipantSheet: View {
         }
         
         // Add selected previous participants
+        print("Adding \(selectedPreviousParticipants.count) selected previous participants")
+        var addedRealUsers = false
+        
         for participantId in selectedPreviousParticipants {
             if let participant = previousParticipants.first(where: { $0.id == participantId }) {
+                print("Adding previous participant: \(participant.name) (ID: \(participant.id), isClaimed: \(participant.isClaimed))")
+                
+                // Check if this is a Firebase ID (for debugging)
+                if participant.id.contains("-") {
+                    print("Warning: Previous participant has UUID-style ID, not Firebase ID")
+                } else {
+                    print("Previous participant has Firebase-style ID")
+                }
+                
+                // If this is a real claimed user, we'll need to notify them
+                if participant.isClaimed {
+                    addedRealUsers = true
+                }
+                
                 viewModel.addParticipantToCurrentTrip(participant)
+            }
+        }
+        
+        // If we've added real users, update their notification settings
+        if addedRealUsers {
+            print("Added real users to trip - they will need to refresh their trips list")
+            
+            // Give Firebase time to update
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // Post a notification to alert the app that trips have been updated
+                // This could be expanded to a push notification in a future version
+                NotificationCenter.default.post(name: NSNotification.Name("TripsUpdated"), object: nil)
             }
         }
         

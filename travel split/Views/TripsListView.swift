@@ -20,27 +20,49 @@ struct TripsListView: View {
     @State private var newTripDescription = ""
     @State private var joinTripCode = ""
     @State private var alertItem: AlertItem?
+    @State private var selectedTripId: String? = nil
+    
+    // Add a state object for network monitoring
+    @StateObject private var networkMonitor = NetworkMonitor.shared
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background color
-                Color(UIColor.systemGroupedBackground)
-                    .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Network status indicator
+                if !networkMonitor.isConnected {
+                    HStack {
+                        Image(systemName: "wifi.slash")
+                            .foregroundColor(.white)
+                        Text("Offline Mode - Changes will sync when connection is restored")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Color.orange)
+                    .zIndex(2) // Ensure it stays on top
+                }
                 
-                if viewModel.trips.isEmpty {
-                    // Display empty state view when there are no trips
-                    EmptyTripsView(onCreateTripTapped: {
-                        showingNewTripSheet = true
-                    })
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("No trips")
-                } else {
-                    // Display list of trips
-                    TripListContentView(
-                        viewModel: viewModel,
-                        onShareTrip: shareTrip
-                    )
+                ZStack {
+                    // Background color
+                    Color(UIColor.systemGroupedBackground)
+                        .ignoresSafeArea()
+                    
+                    if viewModel.trips.isEmpty {
+                        // Display empty state view when there are no trips
+                        EmptyTripsView(onCreateTripTapped: {
+                            showingNewTripSheet = true
+                        }, viewModel: viewModel)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("No trips")
+                    } else {
+                        // Display list of trips
+                        TripListContentView(
+                            viewModel: viewModel,
+                            onShareTrip: shareTrip,
+                            selectedTripId: $selectedTripId
+                        )
+                    }
                 }
             }
             .navigationTitle("Groups")
@@ -100,6 +122,25 @@ struct TripsListView: View {
             .onAppear {
                 // Sync the user name from Firebase when the view appears
                 syncUserNameFromFirebase()
+                
+                // Setup notification observer for trip detail navigation
+                setupNavigationObserver()
+            }
+            .onDisappear {
+                // Remove notification observer
+                NotificationCenter.default.removeObserver(self)
+            }
+            
+            // Navigation link that will be triggered programmatically
+            NavigationLink(
+                destination: selectedTripDestination,
+                tag: "navigateToTrip",
+                selection: Binding<String?>(
+                    get: { selectedTripId != nil ? "navigateToTrip" : nil },
+                    set: { _ in selectedTripId = nil }
+                )
+            ) {
+                EmptyView()
             }
         }
         .onReceive(viewModel.$errorMessage) { errorMessage in
@@ -113,6 +154,32 @@ struct TripsListView: View {
                 DispatchQueue.main.async {
                     viewModel.errorMessage = nil
                 }
+            }
+        }
+    }
+    
+    // Computed property for the destination view
+    private var selectedTripDestination: some View {
+        Group {
+            if let tripId = selectedTripId, let trip = viewModel.trips.first(where: { $0.id == tripId }) {
+                TripDetailView(viewModel: viewModel, trip: trip)
+            } else {
+                Text("Trip not found")
+            }
+        }
+    }
+    
+    // Setup notification observer for trip detail navigation
+    private func setupNavigationObserver() {
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NavigateToTripDetail"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let userInfo = notification.userInfo,
+               let tripId = userInfo["tripId"] as? String {
+                // Set the selected trip ID which will trigger the navigation link
+                self.selectedTripId = tripId
             }
         }
     }
@@ -188,39 +255,86 @@ struct AlertItem: Identifiable {
 /// View shown when there are no trips
 struct EmptyTripsView: View {
     let onCreateTripTapped: () -> Void
+    @ObservedObject var viewModel: TripViewModel
+    @State private var isRefreshing = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.3.fill")
-                .font(.system(size: 72))
-                .foregroundColor(.accentColor)
-                .accessibilityHidden(true)
-            
-            Text("No Groups Yet")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Create a new group to start tracking expenses with friends")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-            
-            Button(action: onCreateTripTapped) {
-                Label("Create New Group", systemImage: "plus.circle.fill")
+        VStack(spacing: 0) {
+            // Fixed header
+            HStack {
+                Text("Your Groups")
                     .font(.headline)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                Spacer()
             }
-            .padding(.horizontal, 40)
-            .padding(.top, 10)
-            .accessibilityLabel("Create new group")
-            .accessibilityHint("Creates a new group to track expenses")
+            .background(Color(UIColor.systemGroupedBackground))
+            .zIndex(1) // Ensure header is always on top
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 72))
+                        .foregroundColor(.accentColor)
+                        .accessibilityHidden(true)
+                        .padding(.top, 60)
+                    
+                    Text("No Groups Yet")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Create a new group to start tracking expenses with friends")
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    Button(action: onCreateTripTapped) {
+                        Label("Create New Group", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.top, 10)
+                    .accessibilityLabel("Create new group")
+                    .accessibilityHint("Creates a new group to track expenses")
+                }
+                .padding()
+                .frame(minHeight: 500) // Ensures there's space to pull
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .refreshable {
+                print("🔄 REFRESHING TRIPS FROM PULL GESTURE (EMPTY STATE)")
+                await refreshData()
+            }
         }
-        .padding()
+    }
+    
+    // Refresh function using async/await
+    private func refreshData() async {
+        // Set state to refreshing
+        isRefreshing = true
+        
+        // Create a task that can be awaited
+        return await withCheckedContinuation { continuation in
+            // Call the view model's refresh method
+            DispatchQueue.main.async {
+                print("🔄 REFRESHING TRIPS FROM FIREBASE (EMPTY STATE)")
+                viewModel.refreshTrips()
+                
+                // Add a small delay for better user feedback
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isRefreshing = false
+                    print("🔄 TRIPS REFRESHED (EMPTY STATE) - Total trips: \(viewModel.trips.count)")
+                    continuation.resume()
+                }
+            }
+        }
     }
 }
 
@@ -251,26 +365,47 @@ struct AddMenuButton: View {
 struct TripListContentView: View {
     @ObservedObject var viewModel: TripViewModel
     let onShareTrip: () -> Void
+    @Binding var selectedTripId: String?
     @State private var tripToLeave: Trip?
     @State private var showingLeaveConfirmation = false
     @State private var showingBalanceWarning = false
+    @State private var isRefreshing = false
     
     var body: some View {
-        List {
-            Section(header: Text("Your Groups")) {
+        VStack(spacing: 0) {
+            // Fixed header
+            HStack {
+                Text("Your Groups")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                Spacer()
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .zIndex(1) // Ensure header is always on top
+            
+            // Scrollable content with refresh indicator
+            List {
                 ForEach(viewModel.trips) { trip in
                     NavigationLink(destination: TripDetailView(viewModel: viewModel, trip: trip)) {
-                        TripRowView(trip: trip)
+                        TripRowView(trip: trip, viewModel: viewModel)
+                            .padding(.vertical, 4)
                     }
+                    .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .swipeActions(edge: .trailing) {
-                        Button("Leave", role: .destructive) {
+                        Button(role: .destructive) {
                             tripToLeave = trip
                             if viewModel.canLeaveTrip(trip) {
                                 showingLeaveConfirmation = true
                             } else {
                                 showingBalanceWarning = true
                             }
+                        } label: {
+                            Label("Leave", systemImage: "door.right.hand.open")
                         }
+                        .tint(.red)
                     }
                     .contextMenu {
                         Button(action: {
@@ -295,11 +430,15 @@ struct TripListContentView: View {
                                 .foregroundColor(.red)
                         }
                     }
-                    .accessibilityHint("Navigate to trip details")
                 }
             }
+            .listStyle(PlainListStyle())
+            .background(Color(UIColor.systemGroupedBackground))
+            .refreshable {
+                print("🔄 REFRESHING TRIPS FROM PULL GESTURE")
+                await refreshData()
+            }
         }
-        .listStyle(InsetGroupedListStyle())
         .confirmationDialog(
             "Leave Group",
             isPresented: $showingLeaveConfirmation,
@@ -307,6 +446,7 @@ struct TripListContentView: View {
         ) {
             Button("Leave Group", role: .destructive) {
                 if let trip = tripToLeave {
+                    print("Attempting to leave trip: \(trip.name)")
                     viewModel.leaveTrip(trip: trip)
                     tripToLeave = nil
                 }
@@ -330,11 +470,34 @@ struct TripListContentView: View {
             }
         }
     }
+    
+    // Refresh function using async/await
+    private func refreshData() async {
+        // Set state to refreshing
+        isRefreshing = true
+        
+        // Create a task that can be awaited
+        return await withCheckedContinuation { continuation in
+            // Call the view model's refresh method
+            DispatchQueue.main.async {
+                print("🔄 REFRESHING TRIPS FROM FIREBASE")
+                viewModel.refreshTrips()
+                
+                // Add a small delay for better user feedback
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isRefreshing = false
+                    print("🔄 TRIPS REFRESHED - Total trips: \(viewModel.trips.count)")
+                    continuation.resume()
+                }
+            }
+        }
+    }
 }
 
 /// Individual row displaying trip information
 struct TripRowView: View {
     let trip: Trip
+    @ObservedObject var viewModel: TripViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -354,29 +517,43 @@ struct TripRowView: View {
                 Spacer()
                 
                 if !trip.expenses.isEmpty {
-                    Text("\(trip.baseCurrencySymbol)\(getTotalAmount(), specifier: "%.2f")")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
-                        .accessibilityLabel("Total \(formatCurrency(getTotalAmount()))")
+                    HStack(spacing: 4) {
+                        let balance = viewModel.getUserBalanceInTrip(trip)
+                        let balanceText = balance > 0 ? "owed" : (balance < 0 ? "owe" : "settled")
+                        
+                        Text(balanceText)
+                            .font(.caption)
+                            .foregroundColor(getBalanceColor(balance))
+                        
+                        Text("\(trip.baseCurrencySymbol)\(abs(balance), specifier: "%.2f")")
+                            .font(.subheadline.bold())
+                            .foregroundColor(getBalanceColor(balance))
+                            .accessibilityLabel("\(balanceText) \(formatCurrency(abs(balance)))")
+                    }
                 }
             }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) participants, \(trip.expenses.isEmpty ? "No expenses" : "Total \(formatCurrency(getTotalAmount()))")")
+        .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) participants, \(trip.expenses.isEmpty ? "No expenses" : "\(getUserBalanceDescription(trip))")")
     }
     
-    /// Calculate the total amount for the trip
-    private func getTotalAmount() -> Double {
-        return trip.expenses.reduce(0) { total, expense in
-            let expenseCurrency = expense.currencyCode ?? "USD"
-            let convertedAmount = CurrencyConverterService.shared.convert(
-                amount: expense.amount,
-                from: expenseCurrency, 
-                to: trip.baseCurrencyCode
-            )
-            return total + convertedAmount
+    /// Get color based on balance status
+    private func getBalanceColor(_ balance: Double) -> Color {
+        if balance > 0 {
+            return .green
+        } else if balance < 0 {
+            return .red
+        } else {
+            return .secondary
         }
+    }
+    
+    /// Get user balance description for accessibility
+    private func getUserBalanceDescription(_ trip: Trip) -> String {
+        let balance = viewModel.getUserBalanceInTrip(trip)
+        let balanceText = balance > 0 ? "You are owed" : (balance < 0 ? "You owe" : "You are settled up")
+        return "\(balanceText) \(formatCurrency(abs(balance)))"
     }
     
     /// Format currency for accessibility labels
@@ -583,25 +760,24 @@ struct NewTripSheet: View {
     
     // Form validation
     private var isFormValid: Bool {
-        !tripName.isEmpty && (!showingParticipantsSection || participants.allSatisfy { !$0.name.isEmpty })
+        // Valid if trip name is not empty AND either:
+        // 1. Participants section is not shown, OR
+        // 2. At least one manually added participant has a non-empty name, OR
+        // 3. At least one previous participant is selected
+        let hasValidName = !tripName.isEmpty
+        let participantsValid = !showingParticipantsSection || 
+                               (!participants.isEmpty && participants.allSatisfy { !$0.name.isEmpty }) || 
+                               !selectedPreviousParticipants.isEmpty
+        
+        return hasValidName && participantsValid
     }
     
     // Toggle the selection of a previous participant
     private func toggleParticipantSelection(_ participant: User) {
         if selectedPreviousParticipants.contains(participant.id) {
             selectedPreviousParticipants.remove(participant.id)
-            
-            // Remove from the participants list if they were added
-            participants.removeAll { entry in
-                // Match by name since we don't have the ID in TripParticipantEntry
-                return entry.name == participant.name
-            }
         } else {
             selectedPreviousParticipants.insert(participant.id)
-            
-            // Add to the participants list
-            let entry = TripParticipantEntry(name: participant.name, email: "")
-            participants.append(entry)
         }
     }
     
@@ -614,12 +790,19 @@ struct NewTripSheet: View {
             // Filter out empty entries
             let validParticipants = participants.filter { !$0.name.isEmpty }
             
-            // Create unclaimed participants
-            initialParticipants = validParticipants.map { entry in
-                User.createUnclaimed(
+            // Create unclaimed participants from manual entries
+            for entry in validParticipants {
+                initialParticipants.append(User.createUnclaimed(
                     name: entry.name,
                     email: ""
-                )
+                ))
+            }
+            
+            // Add selected previous participants
+            for participantId in selectedPreviousParticipants {
+                if let participant = previousParticipants.first(where: { $0.id == participantId }) {
+                    initialParticipants.append(participant)
+                }
             }
         }
         
@@ -699,12 +882,26 @@ struct JoinTripSheet: View {
     
     /// Joins a trip with the entered invite code
     private func joinTrip() {
-        viewModel.joinTrip(withInviteCode: inviteCode)
-        
-        // Only dismiss this sheet if we're not showing the claim view
-        if !viewModel.showParticipantClaimingView {
-            inviteCode = ""
-            isPresented = false
+        viewModel.joinTrip(withInviteCode: inviteCode) { success in
+            // If join was successful and not showing claim view, navigate to trip detail
+            if success && !viewModel.showParticipantClaimingView {
+                if let trip = viewModel.currentTrip {
+                    // Post notification to navigate to the trip detail
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NavigateToTripDetail"),
+                        object: nil,
+                        userInfo: ["tripId": trip.id]
+                    )
+                }
+                
+                inviteCode = ""
+                isPresented = false
+            }
+            // Only dismiss this sheet if we're not showing the claim view
+            else if !viewModel.showParticipantClaimingView {
+                inviteCode = ""
+                isPresented = false
+            }
         }
     }
 } 

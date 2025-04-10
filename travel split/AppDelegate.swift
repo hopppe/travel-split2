@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import FirebaseFirestore
 
 // MARK: - App Delegate for Firebase Configuration
 
@@ -22,7 +23,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize Firebase
         FirebaseApp.configure()
         
-        print("Firebase successfully configured in AppDelegate")
+        // Configure Firestore settings after Firebase is initialized
+        let settings = FirestoreSettings()
+        
+        // Enable cache with a reasonable size (100MB)
+        let cacheSize: Int64 = 100 * 1024 * 1024 // 100MB
+        settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: cacheSize))
+        
+        Firestore.firestore().settings = settings
+        
+        print("Firebase successfully configured in AppDelegate with offline persistence enabled")
         
         // Check if app was launched from a URL (deep link)
         if let url = launchOptions?[.url] as? URL {

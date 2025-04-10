@@ -89,6 +89,9 @@ struct SignInView: View {
             if success {
                 self.hasCompletedSetup = true
                 
+                // Post notification that authentication changed
+                NotificationCenter.default.post(name: NSNotification.Name("AuthenticationDidChange"), object: nil)
+                
                 dismiss()
             } else {
                 showError = true

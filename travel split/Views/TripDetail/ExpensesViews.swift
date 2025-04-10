@@ -15,23 +15,30 @@ struct ExpensesListView: View {
     let trip: Trip
     let onAddExpense: () -> Void
     let onEditExpense: (Expense) -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
             
-            if trip.expenses.isEmpty {
-                EmptyExpensesView(onAddExpense: onAddExpense)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("No expenses")
-            } else {
-                ExpensesContentView(
-                    viewModel: viewModel,
-                    trip: trip,
-                    onAddExpense: onAddExpense,
-                    onEditExpense: onEditExpense
-                )
+            VStack(spacing: 0) {
+                // Removed divider
+                
+                if trip.expenses.isEmpty {
+                    EmptyExpensesView(onAddExpense: onAddExpense)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("No expenses")
+                        .padding(.top, 6) // Slightly increased padding
+                } else {
+                    ExpensesContentView(
+                        viewModel: viewModel,
+                        trip: trip,
+                        onAddExpense: onAddExpense,
+                        onEditExpense: onEditExpense
+                    )
+                    .padding(.top, 6) // Slightly increased padding
+                }
             }
         }
     }
@@ -88,10 +95,14 @@ struct ExpensesContentView: View {
     let onAddExpense: () -> Void
     let onEditExpense: (Expense) -> Void
     
+    @State private var isRefreshing = false
+    
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 LazyVStack(spacing: 16) {
+                    // Removed spacer for additional padding
+                    
                     // Simple flat list of expenses without date grouping
                     ForEach(trip.expenses.sorted(by: { $0.date > $1.date })) { expense in
                         ExpenseRowView(
@@ -106,6 +117,10 @@ struct ExpensesContentView: View {
                 }
                 .padding(.bottom, 80) // Space for FAB
             }
+            .refreshable {
+                print("🔄 REFRESHING EXPENSES FROM PULL GESTURE")
+                await refreshData()
+            }
             
             // Floating action button
             FloatingActionButton(systemImage: "plus") {
@@ -114,6 +129,26 @@ struct ExpensesContentView: View {
             .padding(.trailing, 20)
             .padding(.bottom, 20)
             .accessibilityLabel("Add expense")
+        }
+    }
+    
+    // Refresh function using async/await
+    private func refreshData() async {
+        // Set state to refreshing
+        isRefreshing = true
+        
+        // Create a Task that can be awaited
+        return await withCheckedContinuation { continuation in
+            // Call the view model's refresh method
+            viewModel.refreshCurrentTrip { success in
+                print("🔄 EXPENSES REFRESHED - Success: \(success), Trip has \(self.trip.expenses.count) expenses")
+                
+                // Set state to not refreshing
+                isRefreshing = false
+                
+                // Resume the continuation
+                continuation.resume()
+            }
         }
     }
 }
