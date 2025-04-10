@@ -9,14 +9,26 @@ A mobile app that helps friends and travel groups split expenses easily while tr
 - Track who owes what to whom
 - Add placeholder participants that others can claim
 - Share trips with friends using invite codes
+- User authentication with email and password
+- Offline functionality - continue using the app without internet
+- Currency conversion - record expenses in different currencies
+- Real-time balance calculations and updates
 
 ## Technical Details
 
 - Built with SwiftUI
 - Uses Firebase for backend storage and authentication
 - Implements real-time updates for expenses and balances
+- Supports offline mode using local caching
+- Network connectivity monitoring
+- Modern MVVM architecture
 
 ## How to Use
+
+### Getting Started
+
+1. Create an account or sign in with existing credentials
+2. Once logged in, you'll see your trips dashboard
 
 ### Creating a Trip
 
@@ -39,7 +51,8 @@ A mobile app that helps friends and travel groups split expenses easily while tr
 3. Enter expense details (title, amount, category)
 4. Select who paid for the expense
 5. Choose split type (equal or custom)
-6. Tap "Save"
+6. Select the currency if different from default
+7. Tap "Save"
 
 ### Viewing Balances
 
@@ -48,6 +61,12 @@ A mobile app that helps friends and travel groups split expenses easily while tr
 3. See a summary of who owes what to whom
 4. View total trip cost and average per person
 
+### Working Offline
+
+- The app automatically synchronizes when internet connection is restored
+- You can continue adding expenses and viewing balances while offline
+- New data will be uploaded when you're back online
+
 ## Development
 
 ### Requirements
@@ -55,17 +74,19 @@ A mobile app that helps friends and travel groups split expenses easily while tr
 - Xcode 14.0+
 - iOS 16.0+
 - Swift 5.7+
+- Firebase account and configuration
 
 ### Getting Started
 
 1. Clone the repository
 2. Open the project in Xcode
-3. Build and run on a simulator or device
+3. Set up Firebase configuration
+4. Build and run on a simulator or device
 
 ## Future Enhancements
 
-- User authentication
-- Cloud storage and synchronization
-- Receipt scanning
-- Transaction history
-- Direct payment integration 
+- Receipt scanning and automatic expense detection
+- Transaction history with filtering options
+- Direct payment integration with popular services
+- Advanced currency management with real-time rates
+- Expense categories analytics and reporting 
