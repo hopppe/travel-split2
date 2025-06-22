@@ -477,12 +477,12 @@ class TripViewModel: ObservableObject {
     
     // MARK: - Expense Management Delegation
     
-    func addExpenseToCurrentTrip(title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD") {
-        expenseManager.addExpense(title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode)
+    func addExpenseToCurrentTrip(title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
+        expenseManager.addExpense(title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode, date: date)
     }
     
-    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD") {
-        expenseManager.updateExpense(id: id, title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode)
+    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
+        expenseManager.updateExpense(id: id, title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode, date: date)
     }
     
     func deleteExpense(withId id: String) {

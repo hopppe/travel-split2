@@ -69,8 +69,27 @@ struct UserProfileView: View {
                         }
                     }
                 }
+                
+                // Feedback section
+                Section(header: Text("Feedback")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Please submit any feedback for the app:")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        
+                        Button("ethan@ingenuitylabs.net") {
+                            // Create mailto URL
+                            if let url = URL(string: "mailto:ethan@ingenuitylabs.net?subject=Free Split App Feedback") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.body)
+                        .foregroundColor(.blue)
+                    }
+                    .padding(.vertical, 4)
+                }
             }
-            .navigationTitle(isInitialSetup ? "Welcome to Free Split" : "Edit Profile")
+            .navigationTitle(isInitialSetup ? "Welcome to Free Split" : "Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if !isInitialSetup {

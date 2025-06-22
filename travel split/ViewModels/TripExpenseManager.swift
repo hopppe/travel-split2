@@ -23,7 +23,7 @@ class TripExpenseManager {
     
     func addExpense(title: String, amount: Double, paidBy: User, splitType: SplitType, 
                     customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
-                    currencyCode: String = "USD") {
+                    currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
@@ -43,6 +43,7 @@ class TripExpenseManager {
                     amount: amount,
                     paidBy: validPaidBy,
                     participants: trip.participants,
+                    date: date,
                     category: category,
                     currencyCode: currencyCode
                 )
@@ -69,6 +70,7 @@ class TripExpenseManager {
                     amount: amount,
                     paidBy: validPaidBy,
                     shares: validShares,
+                    date: date,
                     category: category,
                     currencyCode: currencyCode
                 )
@@ -86,7 +88,7 @@ class TripExpenseManager {
     
     func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, 
                       customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
-                      currencyCode: String = "USD") {
+                      currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
@@ -107,6 +109,7 @@ class TripExpenseManager {
                 amount: amount,
                 paidBy: paidBy,
                 participants: trip.participants,
+                date: date,
                 category: category,
                 currencyCode: currencyCode
             )
@@ -120,6 +123,7 @@ class TripExpenseManager {
                 amount: amount,
                 paidBy: paidBy,
                 shares: shares,
+                date: date,
                 category: category,
                 currencyCode: currencyCode
             )

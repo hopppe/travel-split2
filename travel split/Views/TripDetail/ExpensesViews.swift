@@ -97,22 +97,68 @@ struct ExpensesContentView: View {
     
     @State private var isRefreshing = false
     
+    // Group expenses by day for better organization
+    private var expensesByDay: [(String, [Expense])] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .full
+        dateFormatter.timeStyle = .none
+        
+        let sortedExpenses = trip.expenses.sorted(by: { $0.date > $1.date })
+        let grouped = Dictionary(grouping: sortedExpenses) { expense in
+            dateFormatter.string(from: expense.date)
+        }
+        
+        return grouped.sorted { (first, second) in
+            // Sort by the first expense date in each group (most recent first)
+            guard let firstDate = first.value.first?.date,
+                  let secondDate = second.value.first?.date else {
+                return false
+            }
+            return firstDate > secondDate
+        }
+    }
+    
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
-                LazyVStack(spacing: 16) {
-                    // Removed spacer for additional padding
-                    
-                    // Simple flat list of expenses without date grouping
-                    ForEach(trip.expenses.sorted(by: { $0.date > $1.date })) { expense in
-                        ExpenseRowView(
-                            viewModel: viewModel,
-                            expense: expense,
-                            onEdit: {
-                                onEditExpense(expense)
+                LazyVStack(spacing: 8) {
+                    // Group expenses by day with date headers
+                    ForEach(expensesByDay, id: \.0) { (dateString, expenses) in
+                        VStack(spacing: 8) {
+                            // Date header for each day
+                            HStack {
+                                Text(dateString)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                Spacer()
                             }
-                        )
-                        .padding(.horizontal)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                            
+                            // Expenses for this day - joined together with no spacing
+                            VStack(spacing: 0) {
+                                ForEach(Array(expenses.enumerated()), id: \.element.id) { index, expense in
+                                    ExpenseRowView(
+                                        viewModel: viewModel,
+                                        expense: expense,
+                                        onEdit: {
+                                            onEditExpense(expense)
+                                        },
+                                        showDate: false, // Don't show date on individual expenses
+                                        isFirst: index == 0,
+                                        isLast: index == expenses.count - 1
+                                    )
+                                    .padding(.horizontal)
+                                    
+                                    // Add divider between expenses on the same day (except for the last one)
+                                    if index < expenses.count - 1 {
+                                        Divider()
+                                            .padding(.horizontal, 24)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.bottom, 80) // Space for FAB
@@ -160,6 +206,9 @@ struct ExpenseRowView: View {
     @ObservedObject var viewModel: TripViewModel
     let expense: Expense
     let onEdit: () -> Void
+    var showDate: Bool = true
+    var isFirst: Bool = false
+    var isLast: Bool = false
     @State private var isShowingDeleteConfirmation = false
     
     private let dateFormatter: DateFormatter = {
@@ -174,7 +223,10 @@ struct ExpenseRowView: View {
             expense: expense,
             trip: trip,
             dateFormatter: dateFormatter,
-            onEdit: onEdit
+            onEdit: onEdit,
+            showDate: showDate,
+            isFirst: isFirst,
+            isLast: isLast
         )
         .contextMenu {
             ExpenseContextMenu(
@@ -245,6 +297,9 @@ struct ExpenseButton: View {
     let trip: Trip
     let dateFormatter: DateFormatter
     let onEdit: () -> Void
+    var showDate: Bool = true
+    var isFirst: Bool = false
+    var isLast: Bool = false
     
     var body: some View {
         Button(action: onEdit) {
@@ -253,7 +308,8 @@ struct ExpenseButton: View {
                 ExpenseDetails(
                     expense: expense,
                     trip: trip, 
-                    dateFormatter: dateFormatter
+                    dateFormatter: dateFormatter,
+                    showDate: showDate
                 )
                 
                 Spacer()
@@ -272,7 +328,14 @@ struct ExpenseButton: View {
             }
             .padding(12)
             .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(12)
+            .clipShape(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: isFirst ? 12 : 0,
+                    bottomLeadingRadius: isLast ? 12 : 0,
+                    bottomTrailingRadius: isLast ? 12 : 0,
+                    topTrailingRadius: isFirst ? 12 : 0
+                )
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -283,6 +346,7 @@ struct ExpenseDetails: View {
     let expense: Expense
     let trip: Trip
     let dateFormatter: DateFormatter
+    var showDate: Bool = true
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -294,10 +358,12 @@ struct ExpenseDetails: View {
             // Payer info
             PayerText(expense: expense, trip: trip)
             
-            // Date
-            Text(dateFormatter.string(from: expense.date))
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Date (only show if requested)
+            if showDate {
+                Text(dateFormatter.string(from: expense.date))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }

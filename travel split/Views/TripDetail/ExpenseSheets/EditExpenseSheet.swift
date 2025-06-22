@@ -26,6 +26,8 @@ struct EditExpenseSheet: View {
     @State private var currencySymbol: String
     @State private var showCurrencyPicker = false
     @State private var isInitialLoad = true
+    @State private var expenseDate: Date
+    @State private var showDatePicker = false
     
     // Currency options
     private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R"]
@@ -39,6 +41,7 @@ struct EditExpenseSheet: View {
         _expenseName = State(initialValue: expense.title)
         _expenseAmount = State(initialValue: String(format: "%.2f", expense.amount))
         _currencySymbol = State(initialValue: expense.currencySymbol)
+        _expenseDate = State(initialValue: expense.date)
     }
     
     var body: some View {
@@ -70,6 +73,7 @@ struct EditExpenseSheet: View {
             // MARK: - Payer Section
             if let trip = viewModel.currentTrip {
                 Section {
+                    // Paid By row
                     HStack {
                         Text("Paid By")
                             .font(.body)
@@ -88,6 +92,23 @@ struct EditExpenseSheet: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Select who paid for this expense")
+                    
+                    // Date row
+                    HStack {
+                        Text("On")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Button(action: { showDatePicker = true }) {
+                            Text(expenseDate, style: .date)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Select expense date")
                 }
                 
                 // MARK: - Participants Section
@@ -167,6 +188,23 @@ struct EditExpenseSheet: View {
                 isPresented: $showCurrencyPicker,
                 options: currencyOptions
             )
+        }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationStack {
+                DatePicker("Expense Date", selection: $expenseDate, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .padding()
+                    .navigationTitle("Select Date")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showDatePicker = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium])
         }
         .onAppear {
             // Load expense data when view appears
@@ -254,7 +292,8 @@ struct EditExpenseSheet: View {
             splitType: .custom, // Always use custom split
             customShares: shares,
             category: expense.category,
-            currencyCode: getCurrencyCode(for: currencySymbol)
+            currencyCode: getCurrencyCode(for: currencySymbol),
+            date: expenseDate
         )
         
         dismiss()

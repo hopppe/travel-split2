@@ -46,7 +46,8 @@ struct ParticipantRow: View {
                     Text(currencySymbol)
                         .foregroundColor(.secondary)
                     
-                    // Modified TextField implementation for better UX
+                    // Enhanced TextField with clear visual styling to make it obvious users can edit amounts manually
+                    // The background and border clearly indicate this is an editable text field
                     TextField("0", text: Binding(
                         get: { 
                             if isFocused {
@@ -67,6 +68,16 @@ struct ParticipantRow: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 70)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(UIColor.systemGray6))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(isFocused ? Color.accentColor : Color(UIColor.systemGray4), lineWidth: 1)
+                            )
+                    )
                     .onTapGesture {
                         // Set focus state and clear the field
                         isFocused = true

@@ -34,18 +34,6 @@ struct ParticipantsView: View {
                             )
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(buildAccessibilityLabel(for: participant))
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                // Don't show remove button for current user
-                                if !isCurrentUser(participant) {
-                                    Button(role: .destructive) {
-                                        participantToRemove = participant
-                                        handleRemoveParticipant(participant)
-                                    } label: {
-                                        Label("Remove", systemImage: "person.badge.minus")
-                                    }
-                                    .tint(.red)
-                                }
-                            }
                             .contextMenu {
                                 if !isCurrentUser(participant) {
                                     Button(role: .destructive) {
@@ -68,7 +56,7 @@ struct ParticipantsView: View {
                             .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .contentShape(Rectangle())
-                            .accessibilityHint(!isCurrentUser(participant) ? "Swipe left to remove, or long press for options" : "")
+                            .accessibilityHint(!isCurrentUser(participant) ? "Long press for options" : "")
                         }
                     }
                     
@@ -263,13 +251,6 @@ struct ParticipantRowView: View {
             }
             
             Spacer()
-            
-            // Add a subtle indicator for non-current users
-            if !isCurrentUser {
-                Image(systemName: "chevron.left")
-                    .font(.caption)
-                    .foregroundColor(.secondary.opacity(0.5))
-            }
         }
         .frame(maxWidth: .infinity, minHeight: 60) // Ensure minimum height for better touch target
         .contentShape(Rectangle()) // Make entire area tappable
