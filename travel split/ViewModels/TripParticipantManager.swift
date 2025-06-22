@@ -1,12 +1,13 @@
 //
 //  TripParticipantManager.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 4/9/25.
 //
 
 import Foundation
 import Combine
+import FirebaseAuth
 
 // Manages participant-related operations for trips
 class TripParticipantManager {
@@ -208,17 +209,43 @@ class TripParticipantManager {
             return
         }
         
+        // Determine the best name to use for the claimed participant
+        // Priority: 1. Firebase display name, 2. Saved user name (if not "You"), 3. Keep original placeholder name
+        let bestName: String
+        let currentUser = tripViewModel.currentUser
+        
+        // Check if we have a proper Firebase display name
+        if let firebaseUser = Auth.auth().currentUser,
+           let displayName = firebaseUser.displayName,
+           !displayName.isEmpty,
+           displayName != "You" {
+            bestName = displayName
+            print("Using Firebase display name: \(displayName)")
+        }
+        // Check if current user has a proper name (not "You")
+        else if !currentUser.name.isEmpty && currentUser.name != "You" {
+            bestName = currentUser.name
+            print("Using current user name: \(currentUser.name)")
+        }
+        // Fall back to keeping the original placeholder name
+        else {
+            bestName = participant.name
+            print("Keeping original placeholder name: \(participant.name) (current user name is '\(currentUser.name)')")
+        }
+        
         // Update the participant to be claimed
         var updatedParticipant = participant
         updatedParticipant.isClaimed = true
-        updatedParticipant.claimedByUserId = tripViewModel.currentUser.id
-        updatedParticipant.name = tripViewModel.currentUser.name // Update name to current user's name
+        updatedParticipant.claimedByUserId = currentUser.id
+        updatedParticipant.name = bestName
         
         // Update the participant in the trip
         trip.participants[participantIndex] = updatedParticipant
         
         // Update trip in the view model
         tripViewModel.updateTrip(trip)
+        
+        print("Participant claimed successfully: \(updatedParticipant.name) (isClaimed: \(updatedParticipant.isClaimed), claimedBy: \(updatedParticipant.claimedByUserId ?? "none"))")
     }
     
     // Find the current user's participant in the trip (handles both direct and claimed participants)

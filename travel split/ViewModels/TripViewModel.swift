@@ -1,6 +1,6 @@
 //
 //  TripViewModel.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

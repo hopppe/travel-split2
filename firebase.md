@@ -23,15 +23,15 @@ struct YourApp: App {
   }
 }
 
-# Firebase Setup Guide for Travel Split
+# Firebase Setup Guide for Free Split
 
-This guide will walk you through setting up Firebase with your Travel Split app to enable trip sharing functionality between different users and devices.
+This guide will walk you through setting up Firebase with your Free Split app to enable trip sharing functionality between different users and devices.
 
 ## 1. Create a Firebase Project
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/)
 2. Click "Add project" and follow the prompts
-3. Name your project (e.g., "Travel Split")
+3. Name your project (e.g., "Free Split")
 4. Choose whether to enable Google Analytics (recommended)
 5. Follow the setup wizard to complete project creation
 

@@ -1,10 +1,10 @@
-# Travel Split - Flutter Build Guide
+# Free Split - Flutter Build Guide
 
-This guide provides comprehensive information for rebuilding the Travel Split app in Flutter. The original app was built in SwiftUI, and this document serves as a blueprint for recreating the same functionality in Flutter.
+This guide provides comprehensive information for rebuilding the Free Split app in Flutter. The original app was built in SwiftUI, and this document serves as a blueprint for recreating the same functionality in Flutter.
 
 ## App Overview
 
-Travel Split is a mobile app that helps friends and travel groups split expenses easily while traveling together. It allows users to create trips, add participants, record expenses with custom splitting options, and track who owes what to whom, all with a clean, intuitive interface.
+Free Split is a mobile app that helps friends and travel groups split expenses easily while traveling together. It allows users to create trips, add participants, record expenses with custom splitting options, and track who owes what to whom, all with a clean, intuitive interface.
 
 ## Core Features
 
@@ -353,4 +353,4 @@ Implement Firebase Dynamic Links or custom URL scheme to handle:
 - Integration tests for key user flows
 - Firebase emulator testing
 
-This guide provides a comprehensive starting point for rebuilding Travel Split in Flutter while maintaining its core functionality and user experience. 
+This guide provides a comprehensive starting point for rebuilding Free Split in Flutter while maintaining its core functionality and user experience. 

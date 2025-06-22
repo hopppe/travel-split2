@@ -1,6 +1,6 @@
 //
 //  NetworkMonitor.swift
-//  travel split
+//  free split
 //
 //  Created for offline functionality
 //

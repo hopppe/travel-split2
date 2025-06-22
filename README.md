@@ -1,4 +1,4 @@
-# Travel Split
+# Free Split
 
 A mobile app that helps friends and travel groups split expenses easily while traveling together.
 

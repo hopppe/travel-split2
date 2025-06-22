@@ -1,6 +1,6 @@
 //
 //  ClaimViewCoordinator.swift
-//  travel split
+//  free split
 //
 //  Created by Assistant on 3/5/25.
 //

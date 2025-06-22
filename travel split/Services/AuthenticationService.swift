@@ -89,8 +89,8 @@ class AuthenticationService: ObservableObject {
         if let currentUser = Auth.auth().currentUser, currentUser.isAnonymous {
             print("Converting anonymous user to permanent account")
             
-            // Store the anonymous user ID for trip migration
-            let anonymousUserId = currentUser.uid
+                    // Store the anonymous user ID for trip migration
+        let _ = currentUser.uid
             
             // Create credential
             let credential = EmailAuthProvider.credential(withEmail: email, password: password)
@@ -341,7 +341,7 @@ class AuthenticationService: ObservableObject {
     // Delete the anonymous user
     private func deleteAnonymousUser(completion: @escaping (Bool) -> Void) {
         // Try to re-authenticate as the anonymous user (requires a fresh credential)
-        let anonymousAuth = Auth.auth()
+        let _ = Auth.auth()
         
         // We can't easily re-authenticate and delete an anonymous user after we've signed in with a different user
         // Instead, we'll just assume it's gone and let Firebase garbage collect it later

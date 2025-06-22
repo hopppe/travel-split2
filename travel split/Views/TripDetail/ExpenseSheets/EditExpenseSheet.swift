@@ -1,6 +1,6 @@
 //
 //  EditExpenseSheet.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -156,31 +156,27 @@ struct EditExpenseSheet: View {
         }
         .navigationTitle("Edit Expense")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
+        .navigationBarBackButtonHidden(true)
+        .navigationBarItems(
+            leading: Button("Cancel") {
+                dismiss()
+            },
+            trailing: Button("Save") {
+                saveExpense()
             }
-            
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    saveExpense()
-                }
-                .disabled(!isFormValid())
+            .disabled(!isFormValid())
+        )
+        .safeAreaInset(edge: .bottom) {
+            Button(role: .destructive) {
+                viewModel.deleteExpense(withId: expense.id)
+                dismiss()
+            } label: {
+                Label("Delete Expense", systemImage: "trash")
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
             }
-            
-            ToolbarItem(placement: .bottomBar) {
-                Button(role: .destructive) {
-                    viewModel.deleteExpense(withId: expense.id)
-                    dismiss()
-                } label: {
-                    Label("Delete Expense", systemImage: "trash")
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-            }
+            .buttonStyle(.bordered)
+            .padding()
         }
         .sheet(isPresented: $showCurrencyPicker) {
             ExpenseCurrencyPickerView(
@@ -196,13 +192,11 @@ struct EditExpenseSheet: View {
                     .padding()
                     .navigationTitle("Select Date")
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showDatePicker = false
-                            }
+                    .navigationBarItems(
+                        trailing: Button("Done") {
+                            showDatePicker = false
                         }
-                    }
+                    )
             }
             .presentationDetents([.medium])
         }
@@ -210,13 +204,13 @@ struct EditExpenseSheet: View {
             // Load expense data when view appears
             loadExpenseData()
         }
-        .onChange(of: expenseAmount) { oldValue, newValue in
+        .onChange(of: expenseAmount) { _ in
             // When amount changes, update participant splits if not in initial load
             if !isInitialLoad {
                 updateSplitAmounts()
             }
         }
-        .onChange(of: selectedParticipants.count) { oldValue, newValue in
+        .onChange(of: selectedParticipants.count) { _ in
             // When participants change, update splits
             if !isInitialLoad {
                 updateSplitAmounts()

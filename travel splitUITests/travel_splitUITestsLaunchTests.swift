@@ -1,13 +1,13 @@
 //
 //  travel_splitUITestsLaunchTests.swift
-//  travel splitUITests
+//  free splitUITests
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
 
 import XCTest
 
-final class travel_splitUITestsLaunchTests: XCTestCase {
+final class free_splitUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

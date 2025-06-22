@@ -1,4 +1,4 @@
-# Travel Split Firebase Setup Guide
+# Free Split Firebase Setup Guide
 
 ## Configuration Steps
 

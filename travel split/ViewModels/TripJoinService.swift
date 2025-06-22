@@ -1,6 +1,6 @@
 //
 //  TripJoinService.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 4/9/25.
 //

@@ -1,6 +1,6 @@
 //
 //  AddExpenseSheet.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -27,168 +27,194 @@ struct AddExpenseSheet: View {
     private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼"]
     
     var body: some View {
+        mainForm
+            .navigationTitle("Add Expense")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+                    .navigationBarBackButtonHidden(true)
+        .navigationBarItems(
+            leading: Button("Cancel") {
+                dismiss()
+            },
+            trailing: Button("Save") {
+                saveExpense()
+            }
+            .disabled(!isFormValid())
+        )
+            .sheet(isPresented: $showCurrencyPicker) {
+                currencyPickerSheet
+            }
+            .sheet(isPresented: $showDatePicker) {
+                datePickerSheet
+            }
+            .onAppear {
+                initializeDefaults()
+            }
+            .onChange(of: expenseAmount) { _ in
+                updateSplitAmounts()
+            }
+            .onChange(of: selectedParticipants.count) { _ in
+                updateSplitAmounts()
+            }
+    }
+    
+    private var mainForm: some View {
         Form {
-            // MARK: - Expense Details Section
-            Section(header: Text("Expense Info")) {
-                // Description field
-                TextField("Description", text: $expenseName)
-                    .accessibilityLabel("Expense description")
-                
-                // Amount with currency selector
-                HStack {
-                    Button(action: { showCurrencyPicker = true }) {
-                        Text(currencySymbol)
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(UIColor.systemGray5))
-                            .cornerRadius(8)
-                    }
-                    .accessibilityLabel("Select currency")
-                    
-                    TextField("Amount", text: $expenseAmount)
-                        .keyboardType(.decimalPad)
-                        .accessibilityLabel("Expense amount")
-                }
-            }
+            expenseInfoSection
             
-            // MARK: - Payer Section
             if let trip = viewModel.currentTrip {
-                Section {
-                    // Paid By row
-                    HStack {
-                        Text("Paid By")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Picker("", selection: $selectedPayer) {
-                            ForEach(trip.participants) { user in
-                                Text(user.name).tag(user as User?)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Select who paid for this expense")
-                    
-                    // Date row
-                    HStack {
-                        Text("On")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Button(action: { showDatePicker = true }) {
-                            Text(expenseDate, style: .date)
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Select expense date")
-                }
-                
-                // MARK: - Participants Section
-                Section(header: Text("Split Between")) {
-                    ForEach(trip.participants) { user in
-                        ParticipantRow(
-                            user: user,
-                            isSelected: selectedParticipants.contains(user),
-                            currencySymbol: currencySymbol,
-                            amount: participantAmounts[user.id] ?? 0,
-                            onToggle: {
-                                if selectedParticipants.contains(user) {
-                                    // Remove participant
-                                    selectedParticipants.remove(user)
-                                    participantAmounts.removeValue(forKey: user.id)
-                                    // Recalculate split for remaining participants
-                                    if let amount = getAmount(), amount > 0, !selectedParticipants.isEmpty {
-                                        let equalAmount = amount / Double(selectedParticipants.count)
-                                        for participant in selectedParticipants {
-                                            participantAmounts[participant.id] = equalAmount
-                                        }
-                                    }
-                                } else {
-                                    // Add participant with equal share
-                                    selectedParticipants.insert(user)
-                                    if let amount = getAmount(), amount > 0 {
-                                        let equalAmount = amount / Double(selectedParticipants.count)
-                                        for participant in selectedParticipants {
-                                            participantAmounts[participant.id] = equalAmount
-                                        }
-                                    }
-                                }
-                            },
-                            onAmountChanged: { newAmount in
-                                let amount = newAmount ?? 0
-                                participantAmounts[user.id] = amount
-                                updateOtherAmounts(changedUserId: user.id)
-                            },
-                            shouldClearOnEdit: true,
-                            decimalPlaces: 2
-                        )
-                    }
-                }
+                payerSection(trip: trip)
+                participantsSection(trip: trip)
             }
-        }
-        .navigationTitle("Add Expense")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    saveExpense()
-                }
-                .disabled(!isFormValid())
-            }
-        }
-        .sheet(isPresented: $showCurrencyPicker) {
-            ExpenseCurrencyPickerView(
-                currencySymbol: $currencySymbol,
-                isPresented: $showCurrencyPicker,
-                options: currencyOptions
-            )
-        }
-        .sheet(isPresented: $showDatePicker) {
-            NavigationStack {
-                DatePicker("Expense Date", selection: $expenseDate, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
-                    .padding()
-                    .navigationTitle("Select Date")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showDatePicker = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.medium])
-        }
-        .onAppear {
-            // Initialize default values when view appears
-            initializeDefaults()
-        }
-        .onChange(of: expenseAmount) { oldValue, newValue in
-            updateSplitAmounts()
-        }
-        .onChange(of: selectedParticipants.count) { oldValue, newValue in
-            updateSplitAmounts()
         }
     }
     
+    private var currencyPickerSheet: some View {
+        ExpenseCurrencyPickerView(
+            currencySymbol: $currencySymbol,
+            isPresented: $showCurrencyPicker,
+            options: currencyOptions
+        )
+    }
+    
+    private var datePickerSheet: some View {
+        NavigationStack {
+            DatePicker("Expense Date", selection: $expenseDate, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+                .navigationTitle("Select Date")
+                .navigationBarTitleDisplayMode(.inline)
+                                    .navigationBarItems(
+                        trailing: Button("Done") {
+                            showDatePicker = false
+                        }
+                    )
+        }
+        .presentationDetents([.medium])
+    }
+    
+    // MARK: - View Components
+    
+    private var expenseInfoSection: some View {
+        Section(header: Text("Expense Info")) {
+            TextField("Description", text: $expenseName)
+                .accessibilityLabel("Expense description")
+            
+            HStack {
+                currencyButton
+                amountTextField
+            }
+        }
+    }
+    
+    private var currencyButton: some View {
+        Button(action: { showCurrencyPicker = true }) {
+            Text(currencySymbol)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(UIColor.systemGray5))
+                .cornerRadius(8)
+        }
+        .accessibilityLabel("Select currency")
+    }
+    
+    private var amountTextField: some View {
+        TextField("Amount", text: $expenseAmount)
+            .keyboardType(.decimalPad)
+            .accessibilityLabel("Expense amount")
+    }
+    
+    private func payerSection(trip: Trip) -> some View {
+        Section {
+            HStack {
+                Text("Paid By")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Picker("", selection: $selectedPayer) {
+                    ForEach(trip.participants) { user in
+                        Text(user.name).tag(user as User?)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Select who paid for this expense")
+            
+            HStack {
+                Text("On")
+                    .font(.body)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button(action: { showDatePicker = true }) {
+                    Text(expenseDate, style: .date)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Select expense date")
+        }
+    }
+    
+    private func participantsSection(trip: Trip) -> some View {
+        Section(header: Text("Split Between")) {
+            ForEach(trip.participants) { user in
+                participantRow(for: user)
+            }
+        }
+    }
+    
+    private func participantRow(for user: User) -> some View {
+        ParticipantRow(
+            user: user,
+            isSelected: selectedParticipants.contains(user),
+            currencySymbol: currencySymbol,
+            amount: participantAmounts[user.id] ?? 0,
+            onToggle: { toggleParticipant(user) },
+            onAmountChanged: { newAmount in
+                let amount = newAmount ?? 0
+                participantAmounts[user.id] = amount
+                updateOtherAmounts(changedUserId: user.id)
+            },
+            shouldClearOnEdit: true,
+            decimalPlaces: 2
+        )
+    }
+    
     // MARK: - Helper Methods
+    
+    /// Toggle participant selection and recalculate amounts
+    private func toggleParticipant(_ user: User) {
+        if selectedParticipants.contains(user) {
+            // Remove participant
+            selectedParticipants.remove(user)
+            participantAmounts.removeValue(forKey: user.id)
+            // Recalculate split for remaining participants
+            if let amount = getAmount(), amount > 0, !selectedParticipants.isEmpty {
+                let equalAmount = amount / Double(selectedParticipants.count)
+                for participant in selectedParticipants {
+                    participantAmounts[participant.id] = equalAmount
+                }
+            }
+        } else {
+            // Add participant with equal share
+            selectedParticipants.insert(user)
+            if let amount = getAmount(), amount > 0 {
+                let equalAmount = amount / Double(selectedParticipants.count)
+                for participant in selectedParticipants {
+                    participantAmounts[participant.id] = equalAmount
+                }
+            }
+        }
+    }
     
     /// Initialize default values for new expense
     private func initializeDefaults() {

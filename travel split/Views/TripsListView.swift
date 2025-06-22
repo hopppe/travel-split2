@@ -1,6 +1,6 @@
 //
 //  TripsListView.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -134,9 +134,8 @@ struct TripsListView: View {
             // Navigation link that will be triggered programmatically
             NavigationLink(
                 destination: selectedTripDestination,
-                tag: "navigateToTrip",
-                selection: Binding<String?>(
-                    get: { selectedTripId != nil ? "navigateToTrip" : nil },
+                isActive: Binding<Bool>(
+                    get: { selectedTripId != nil },
                     set: { _ in selectedTripId = nil }
                 )
             ) {

@@ -1,5 +1,5 @@
 // FirebaseService.swift
-// travel split
+// free split
 //
 // Created for firebase integration and cloud data synchronization
 
@@ -18,8 +18,8 @@ class FirebaseService {
     private var userId: String?
     
     // App bundle identifiers for deep linking
-    private let iosBundleId = "com.ethanhoppe.travel-split"
-    private let androidPackageName = "com.ethanhoppe.travelsplit" // Update this if you have an Android version
+    private let iosBundleId = "com.ethanhoppe.free-split"
+    private let androidPackageName = "com.ethanhoppe.freesplit" // Update this if you have an Android version
     
     private init() {
         // Firebase is now configured in AppDelegate

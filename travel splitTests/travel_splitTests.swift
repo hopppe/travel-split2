@@ -1,14 +1,14 @@
 //
 //  travel_splitTests.swift
-//  travel splitTests
+//  free splitTests
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
 
 import Testing
-@testable import travel_split
+@testable import free_split
 
-struct travel_splitTests {
+struct free_splitTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.

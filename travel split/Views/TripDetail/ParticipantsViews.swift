@@ -1,6 +1,6 @@
 //
 //  ParticipantsViews.swift
-//  travel split
+//  free split
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -17,6 +17,8 @@ struct ParticipantsView: View {
     @State private var participantToRemove: User?
     @State private var showingRemoveConfirmation = false
     @State private var showingBalanceWarning = false
+    @State private var showingEditNameSheet = false
+    @State private var editingName = ""
     
     var body: some View {
         ZStack {
@@ -35,7 +37,16 @@ struct ParticipantsView: View {
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(buildAccessibilityLabel(for: participant))
                             .contextMenu {
-                                if !isCurrentUser(participant) {
+                                if isCurrentUser(participant) {
+                                    // Edit name option for current user
+                                    Button {
+                                        editingName = participant.name
+                                        showingEditNameSheet = true
+                                    } label: {
+                                        Label("Edit Name", systemImage: "pencil")
+                                    }
+                                } else {
+                                    // Remove option for other participants
                                     Button(role: .destructive) {
                                         participantToRemove = participant
                                         handleRemoveParticipant(participant)
@@ -56,7 +67,7 @@ struct ParticipantsView: View {
                             .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .contentShape(Rectangle())
-                            .accessibilityHint(!isCurrentUser(participant) ? "Long press for options" : "")
+                            .accessibilityHint("Long press for options")
                         }
                     }
                     
@@ -135,6 +146,18 @@ struct ParticipantsView: View {
                 Text("Are you sure you want to remove this participant?")
             }
         }
+        .sheet(isPresented: $showingEditNameSheet) {
+            EditNameSheet(
+                currentName: editingName,
+                onSave: { newName in
+                    updateCurrentUserName(newName)
+                    showingEditNameSheet = false
+                },
+                onCancel: {
+                    showingEditNameSheet = false
+                }
+            )
+        }
     }
     
     // MARK: - Helper Properties and Methods
@@ -207,6 +230,43 @@ struct ParticipantsView: View {
             rootViewController.present(activityVC, animated: true)
         }
     }
+    
+    /// Update the current user's name in this specific trip only
+    private func updateCurrentUserName(_ newName: String) {
+        guard !newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Get the current trip
+        guard var currentTrip = viewModel.currentTrip else {
+            print("Error: No current trip to update participant name")
+            return
+        }
+        
+        // Find the current user's participant entry in this trip
+        let currentUserId = viewModel.currentUser.id
+        
+        // Look for the participant by ID or by claimedByUserId
+        if let participantIndex = currentTrip.participants.firstIndex(where: { 
+            $0.id == currentUserId || $0.claimedByUserId == currentUserId 
+        }) {
+            // Update the participant's name in this trip only
+            var updatedParticipant = currentTrip.participants[participantIndex]
+            updatedParticipant.name = trimmedName
+            
+            // Update the participant in the trip
+            currentTrip.participants[participantIndex] = updatedParticipant
+            
+            // Update the trip immediately in the view model (this updates the UI instantly)
+            viewModel.updateTrip(currentTrip)
+            
+            print("Updated participant name to '\(trimmedName)' in trip '\(currentTrip.name)' only")
+        } else {
+            print("Error: Current user not found as participant in trip")
+        }
+    }
 }
 
 // MARK: - Supporting Views
@@ -272,4 +332,54 @@ struct ParticipantBadge: View {
             .foregroundColor(color)
             .cornerRadius(4)
     }
-} 
+}
+
+/// Sheet for editing the current user's name in the current group only
+struct EditNameSheet: View {
+    let currentName: String
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+    
+    @State private var newName: String = ""
+    @FocusState private var isTextFieldFocused: Bool
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Your Name")) {
+                    TextField("Enter your name", text: $newName)
+                        .focused($isTextFieldFocused)
+                        .autocapitalization(.words)
+                        .disableAutocorrection(false)
+                        .accessibilityLabel("Your name")
+                }
+                
+                Section {
+                    Text("This will update your name in this group only.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Edit Name")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(newName)
+                    }
+                    .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                newName = currentName
+                isTextFieldFocused = true
+            }
+        }
+    }
+}
