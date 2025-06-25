@@ -1,6 +1,6 @@
 //
 //  NetworkMonitor.swift
-//  free split
+//  Split Pro
 //
 //  Created for offline functionality
 //

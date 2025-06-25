@@ -1,4 +1,4 @@
-# Free Split Firebase Setup Guide
+# Split Pro Firebase Setup Guide
 
 ## Configuration Steps
 

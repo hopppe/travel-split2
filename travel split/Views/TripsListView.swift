@@ -1,6 +1,6 @@
 //
 //  TripsListView.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -209,7 +209,7 @@ struct TripsListView: View {
         
         // Create a simple share message with just the essentials
         let shareMessage = """
-        Join my group '\(trip.name)' in Free Split!
+                                        Join my group '\(trip.name)' in EquiSplit!
         
         Link: \(deepLinkURL)
         Code: \(trip.inviteCode)

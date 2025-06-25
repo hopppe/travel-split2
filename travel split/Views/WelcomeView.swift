@@ -16,13 +16,12 @@ struct WelcomeView: View {
             VStack(spacing: 32) {
                 // App logo/icon and title
                 VStack(spacing: 16) {
-                    Image(systemName: "person.3.fill")
+                    Image("splitprocopy")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100)
-                        .foregroundColor(.indigo)
                     
-                    Text("Free Split")
+                    Text("EquiSplit")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                 }

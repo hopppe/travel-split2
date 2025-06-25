@@ -374,9 +374,223 @@ class AuthenticationService: ObservableObject {
             completion(true, nil)
         }
     }
+    
+    // MARK: - Account Deletion
+    
+    /// Delete the user's account and convert them to placeholder status in all trips
+    /// This is irreversible and will permanently delete the user's Firebase account
+    func deleteAccount(completion: @escaping (Bool, Error?) -> Void) {
+        guard let currentFirebaseUser = Auth.auth().currentUser else {
+            errorMessage = "No authenticated user found"
+            completion(false, NSError(domain: "AuthenticationService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user found"]))
+            return
+        }
+        
+        guard let currentUser = self.currentUser else {
+            errorMessage = "No current user found"
+            completion(false, NSError(domain: "AuthenticationService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No current user found"]))
+            return
+        }
+        
+        let userId = currentUser.id
+        let userName = currentUser.name
+        
+        print("Starting account deletion process for user: \(userName) (ID: \(userId))")
+        
+        // Step 0: Stop all Firebase listeners to prevent confusing updates during deletion
+        NotificationCenter.default.post(name: .stopAllListeners, object: nil)
+        
+        // Step 1: Convert user to placeholder status in all trips
+        convertUserToPlaceholderInAllTrips(userId: userId, userName: userName) { [weak self] success in
+            guard let self = self else { return }
+            
+            if !success {
+                print("Failed to convert user to placeholder in trips")
+                self.errorMessage = "Failed to prepare account for deletion"
+                completion(false, NSError(domain: "AuthenticationService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to prepare account for deletion"]))
+                return
+            }
+            
+            print("Successfully converted user to placeholder in all trips")
+            
+            // Step 2: Delete user data from Firestore users collection
+            self.deleteUserFromFirestore(userId: userId) { firestoreSuccess in
+                if !firestoreSuccess {
+                    print("Warning: Failed to delete user data from Firestore, but continuing with account deletion")
+                }
+                
+                // Step 3: Delete the Firebase Auth account
+                currentFirebaseUser.delete { [weak self] error in
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        print("Error deleting Firebase account: \(error.localizedDescription)")
+                        self.errorMessage = "Failed to delete account: \(error.localizedDescription)"
+                        completion(false, error)
+                        return
+                    }
+                    
+                    print("Successfully deleted Firebase account")
+                    
+                    // Step 4: Clear local data
+                    self.clearLocalUserData()
+                    
+                    // Step 5: Update authentication state
+                    self.isAuthenticated = false
+                    self.currentUser = nil
+                    
+                    // Post notification that user account was deleted
+                    NotificationCenter.default.post(name: .userAccountDeleted, object: nil)
+                    
+                    completion(true, nil)
+                }
+            }
+        }
+    }
+    
+    /// Convert the user to placeholder status in all their trips
+    private func convertUserToPlaceholderInAllTrips(userId: String, userName: String, completion: @escaping (Bool) -> Void) {
+        let db = Firestore.firestore()
+        
+        // Find all trips where the user is a participant (either directly or through claiming)
+        db.collection("trips").getDocuments { snapshot, error in
+            guard let documents = snapshot?.documents, error == nil else {
+                print("Error fetching trips for account deletion: \(error?.localizedDescription ?? "Unknown error")")
+                completion(false)
+                return
+            }
+            
+            let batch = db.batch()
+            var hasUpdates = false
+            
+            for document in documents {
+                do {
+                    let trip = try document.data(as: Trip.self)
+                    var updatedTrip = trip
+                    var tripNeedsUpdate = false
+                    
+                    // Check each participant in the trip
+                    for (index, participant) in trip.participants.enumerated() {
+                        // Convert participant to placeholder if they match the user being deleted
+                        if participant.id == userId || participant.claimedByUserId == userId {
+                            print("Converting participant \(participant.name) to placeholder in trip \(trip.name)")
+                            
+                            // Create placeholder version of the user
+                            var placeholderUser = participant
+                            placeholderUser.isClaimed = false
+                            placeholderUser.claimedByUserId = nil
+                            placeholderUser.email = "" // Clear email for privacy
+                            
+                            // Generate a new unclaimed ID to avoid conflicts
+                            placeholderUser.id = FirebaseService.shared.generateUnclaimedParticipantId(name: userName)
+                            
+                            updatedTrip.participants[index] = placeholderUser
+                            tripNeedsUpdate = true
+                        }
+                    }
+                    
+                    // Update expenses where the user was the payer
+                    for (expenseIndex, expense) in trip.expenses.enumerated() {
+                        if expense.paidBy.id == userId || expense.paidBy.claimedByUserId == userId {
+                            print("Updating expense \(expense.title) payer to placeholder in trip \(trip.name)")
+                            
+                            // Find the placeholder participant to use as the new payer
+                            if let placeholderParticipant = updatedTrip.participants.first(where: { $0.name == userName && !$0.isClaimed }) {
+                                var updatedExpense = expense
+                                updatedExpense.paidBy = placeholderParticipant
+                                
+                                // Update shares if needed
+                                for (shareIndex, share) in expense.shares.enumerated() {
+                                    if share.user.id == userId || share.user.claimedByUserId == userId {
+                                        updatedExpense.shares[shareIndex].user = placeholderParticipant
+                                    }
+                                }
+                                
+                                updatedTrip.expenses[expenseIndex] = updatedExpense
+                                tripNeedsUpdate = true
+                            }
+                        } else {
+                            // Update shares where the user was a participant
+                            var updatedExpense = expense
+                            var expenseNeedsUpdate = false
+                            
+                            for (shareIndex, share) in expense.shares.enumerated() {
+                                if share.user.id == userId || share.user.claimedByUserId == userId {
+                                    if let placeholderParticipant = updatedTrip.participants.first(where: { $0.name == userName && !$0.isClaimed }) {
+                                        updatedExpense.shares[shareIndex].user = placeholderParticipant
+                                        expenseNeedsUpdate = true
+                                    }
+                                }
+                            }
+                            
+                            if expenseNeedsUpdate {
+                                updatedTrip.expenses[expenseIndex] = updatedExpense
+                                tripNeedsUpdate = true
+                            }
+                        }
+                    }
+                    
+                    // Add the trip to the batch update if it needs updating
+                    if tripNeedsUpdate {
+                        let tripRef = db.collection("trips").document(trip.id)
+                        do {
+                            try batch.setData(from: updatedTrip, forDocument: tripRef)
+                            hasUpdates = true
+                        } catch {
+                            print("Error encoding updated trip for batch: \(error)")
+                        }
+                    }
+                } catch {
+                    print("Error decoding trip for account deletion: \(error)")
+                }
+            }
+            
+            // Commit the batch if there are updates
+            if hasUpdates {
+                batch.commit { error in
+                    if let error = error {
+                        print("Error committing trip updates for account deletion: \(error.localizedDescription)")
+                        completion(false)
+                    } else {
+                        print("Successfully updated all trips for account deletion")
+                        completion(true)
+                    }
+                }
+            } else {
+                print("No trips needed updating for account deletion")
+                completion(true)
+            }
+        }
+    }
+    
+    /// Delete user data from Firestore users collection
+    private func deleteUserFromFirestore(userId: String, completion: @escaping (Bool) -> Void) {
+        Firestore.firestore().collection("users").document(userId).delete { error in
+            if let error = error {
+                print("Error deleting user from Firestore: \(error.localizedDescription)")
+                completion(false)
+            } else {
+                print("Successfully deleted user from Firestore")
+                completion(true)
+            }
+        }
+    }
+    
+    /// Clear all local user data from UserDefaults
+    private func clearLocalUserData() {
+        UserDefaults.standard.removeObject(forKey: "user_id")
+        UserDefaults.standard.removeObject(forKey: "user_name")
+        UserDefaults.standard.removeObject(forKey: "user_email")
+        UserDefaults.standard.removeObject(forKey: "hasCompletedSetup")
+        UserDefaults.standard.set(true, forKey: "allowAnonymousAuth") // Allow anonymous auth for next session
+        
+        print("Cleared all local user data")
+    }
 }
 
 // MARK: - Notification Names
 extension Notification.Name {
     static let userDidSignOut = Notification.Name("userDidSignOut")
+    static let userAccountDeleted = Notification.Name("userAccountDeleted")
+    static let stopAllListeners = Notification.Name("stopAllListeners")
 } 

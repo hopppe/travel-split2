@@ -1,6 +1,6 @@
 //
 //  TripViewModel.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -188,14 +188,19 @@ class TripViewModel: ObservableObject {
                 
                 // Make sure current user is still in the trip participants
                 let currentUserId = self.currentUser.id
-                let isStillParticipant = updatedTrip.participants.contains { $0.id == currentUserId }
+                let isStillParticipant = updatedTrip.participants.contains { $0.id == currentUserId || $0.claimedByUserId == currentUserId }
                 
                 if !isStillParticipant {
                     print("⚠️ Warning: Current user no longer in trip participants!")
-                    // This is a critical issue - log participants for debugging
+                    print("Current user ID: \(currentUserId)")
+                    // This could happen during account deletion - log participants for debugging
                     for (index, participant) in updatedTrip.participants.enumerated() {
-                        print("Participant \(index): id=\(participant.id), name=\(participant.name)")
+                        print("Participant \(index): id=\(participant.id), name=\(participant.name), claimedByUserId=\(participant.claimedByUserId ?? "nil")")
                     }
+                    
+                    // If this happens during normal operation (not account deletion), it's a problem
+                    // But during account deletion, it's expected
+                    print("This may be expected if account deletion is in progress")
                 }
                 
                 // Update the trip in our array
@@ -578,6 +583,17 @@ class TripViewModel: ObservableObject {
         currentUser = user
     }
     
+    // Stop all Firebase listeners without resetting other state
+    func stopAllListeners() {
+        print("Stopping all Firebase listeners")
+        // Remove all listeners
+        for (tripId, listener) in tripListeners {
+            print("Removing listener for trip: \(tripId)")
+            FirebaseService.shared.stopListening(listener: listener)
+        }
+        tripListeners.removeAll()
+    }
+    
     // Reset the view model state after sign out
     func reset() {
         // Clear trips
@@ -585,11 +601,7 @@ class TripViewModel: ObservableObject {
         currentTrip = nil
         
         // Remove all listeners
-        for (tripId, listener) in tripListeners {
-            print("Removing listener for trip: \(tripId)")
-            FirebaseService.shared.stopListening(listener: listener)
-        }
-        tripListeners.removeAll()
+        stopAllListeners()
         
         // Reset any error state
         errorMessage = nil

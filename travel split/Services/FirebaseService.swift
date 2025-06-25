@@ -1,5 +1,5 @@
 // FirebaseService.swift
-// free split
+// Split Pro
 //
 // Created for firebase integration and cloud data synchronization
 
@@ -18,8 +18,8 @@ class FirebaseService {
     private var userId: String?
     
     // App bundle identifiers for deep linking
-    private let iosBundleId = "com.ethanhoppe.free-split"
-    private let androidPackageName = "com.ethanhoppe.freesplit" // Update this if you have an Android version
+    private let iosBundleId = "com.ingenuitylabsllc.freesplitapp"
+    private let androidPackageName = "com.ingenuitylabsllc.freesplitapp" // Update this if you have an Android version
     
     private init() {
         // Firebase is now configured in AppDelegate
@@ -362,7 +362,7 @@ class FirebaseService {
         let deepLink = createDeepLink(inviteCode: inviteCode)
         
         return """
-        Join my group "\(tripName)" in Free Split!
+                                Join my group "\(tripName)" in EquiSplit!
         
         Link: \(deepLink)
         Code: \(inviteCode)

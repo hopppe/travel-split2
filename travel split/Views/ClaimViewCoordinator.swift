@@ -1,6 +1,6 @@
 //
 //  ClaimViewCoordinator.swift
-//  free split
+//  Split Pro
 //
 //  Created by Assistant on 3/5/25.
 //

@@ -1,6 +1,6 @@
 //
 //  Models.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -130,13 +130,29 @@ struct Trip: Identifiable, Codable {
             }
         }
         
+        // Clean up balances - remove any IDs that don't exist in current participants
+        let participantIds = Set(participants.map { $0.id })
+        for balanceId in balances.keys {
+            if !participantIds.contains(balanceId) {
+                print("Warning: Removing balance for non-existent participant ID: \(balanceId)")
+                balances.removeValue(forKey: balanceId)
+            }
+        }
+        
         // Simplify and create debts
         while let creditor = balances.max(by: { $0.value < $1.value }),
               let debtor = balances.min(by: { $0.value < $1.value }),
               creditor.value > 0.01, debtor.value < -0.01 {
             
-            let creditorUser = participants.first(where: { $0.id == creditor.key })!
-            let debtorUser = participants.first(where: { $0.id == debtor.key })!
+            // Safely find the creditor and debtor users
+            guard let creditorUser = participants.first(where: { $0.id == creditor.key }),
+                  let debtorUser = participants.first(where: { $0.id == debtor.key }) else {
+                // If we can't find the user, remove them from balances and continue
+                print("Warning: Could not find user with ID \(creditor.key) or \(debtor.key) in participants. Removing from balances.")
+                balances.removeValue(forKey: creditor.key)
+                balances.removeValue(forKey: debtor.key)
+                continue
+            }
             
             let amount = min(abs(debtor.value), creditor.value)
             debts.append(Debt(

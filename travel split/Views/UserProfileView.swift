@@ -17,6 +17,8 @@ struct UserProfileView: View {
     @State private var isInitialSetup: Bool
     @State private var isAnonymousUser = true
     @State private var authListener: AuthStateDidChangeListenerHandle?
+    @State private var showDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
     
     init(tripViewModel: TripViewModel, isInitialSetup: Bool = false) {
         self.tripViewModel = tripViewModel
@@ -61,12 +63,22 @@ struct UserProfileView: View {
                         Button("Create Account") {
                             showSignUp = true
                         }
+                        
+                        Button("Delete All Data", role: .destructive) {
+                            showDeleteAccountConfirmation = true
+                        }
+                        .disabled(isDeletingAccount)
                     }
                 } else {
                     Section(header: Text("Account Settings")) {
                         Button("Sign Out", role: .destructive) {
                             showSignOutConfirmation = true
                         }
+                        
+                        Button("Delete Account", role: .destructive) {
+                            showDeleteAccountConfirmation = true
+                        }
+                        .disabled(isDeletingAccount)
                     }
                 }
                 
@@ -79,7 +91,7 @@ struct UserProfileView: View {
                         
                         Button("ethan@ingenuitylabs.net") {
                             // Create mailto URL
-                            if let url = URL(string: "mailto:ethan@ingenuitylabs.net?subject=Free Split App Feedback") {
+                            if let url = URL(string: "mailto:ethan@ingenuitylabs.net?subject=EquiSplit App Feedback") {
                                 UIApplication.shared.open(url)
                             }
                         }
@@ -89,7 +101,7 @@ struct UserProfileView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle(isInitialSetup ? "Welcome to Free Split" : "Settings")
+            .navigationTitle(isInitialSetup ? "Welcome to EquiSplit" : "Settings")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if !isInitialSetup {
@@ -161,6 +173,18 @@ struct UserProfileView: View {
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+            .alert(isAnonymousUser ? "Delete All Data" : "Delete Account", isPresented: $showDeleteAccountConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button(isAnonymousUser ? "Delete All Data" : "Delete Account", role: .destructive) {
+                    performDeleteAccount()
+                }
+            } message: {
+                if isAnonymousUser {
+                    Text("Are you sure you want to delete all your data? This action cannot be undone.\n\nAll your trips, expenses, and personal information will be permanently deleted from this device. You will be taken back to the welcome screen.")
+                } else {
+                    Text("Are you sure you want to delete your account? This action cannot be undone.\n\nYour account will be permanently deleted, but you will remain as a placeholder participant in any groups you've joined. Other group members will still be able to see your expenses and balances.")
+                }
             }
             .interactiveDismissDisabled(isInitialSetup)
         }
@@ -240,6 +264,68 @@ struct UserProfileView: View {
         
         // Perform the actual sign out
         authService.signOut()
+    }
+    
+    private func performDeleteAccount() {
+        isDeletingAccount = true
+        
+        if isAnonymousUser {
+            // For anonymous users, just clear all local data and reset app state
+            performAnonymousDataDeletion()
+        } else {
+            // For signed-in users, use the full account deletion process
+            authService.deleteAccount { success, error in
+                DispatchQueue.main.async {
+                    self.isDeletingAccount = false
+                    
+                    if success {
+                        // Account deletion successful - the AuthenticationService will handle
+                        // clearing local data and posting notifications
+                        print("Account deletion completed successfully")
+                        
+                        // Reset the trip view model to clear any cached data
+                        self.tripViewModel.reset()
+                        
+                        // Dismiss the profile view
+                        self.dismiss()
+                    } else {
+                        // Show error message
+                        self.errorMessage = error?.localizedDescription ?? "Failed to delete account"
+                        self.showError = true
+                    }
+                }
+            }
+        }
+    }
+    
+    private func performAnonymousDataDeletion() {
+        print("Deleting all anonymous user data")
+        
+        // Stop all Firebase listeners first
+        NotificationCenter.default.post(name: .stopAllListeners, object: nil)
+        
+        // Clear all UserDefaults data
+        UserDefaults.standard.removeObject(forKey: "user_id")
+        UserDefaults.standard.removeObject(forKey: "user_name")
+        UserDefaults.standard.removeObject(forKey: "user_email")
+        UserDefaults.standard.removeObject(forKey: "hasCompletedSetup")
+        UserDefaults.standard.set(true, forKey: "allowAnonymousAuth")
+        
+        // Sign out from Firebase (this will delete the anonymous account)
+        authService.signOut()
+        
+        // Reset the trip view model to clear all cached data
+        tripViewModel.reset()
+        
+        // Post notification to trigger app state reset
+        NotificationCenter.default.post(name: .userAccountDeleted, object: nil)
+        
+        DispatchQueue.main.async {
+            self.isDeletingAccount = false
+            
+            // Dismiss the profile view
+            self.dismiss()
+        }
     }
     
     private func saveProfile() {

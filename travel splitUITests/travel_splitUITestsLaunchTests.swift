@@ -1,6 +1,6 @@
 //
 //  travel_splitUITestsLaunchTests.swift
-//  free splitUITests
+//  Split ProUITests
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

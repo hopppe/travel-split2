@@ -1,6 +1,6 @@
 //
 //  travel_splitApp.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -148,6 +148,26 @@ struct TravelSplitApp: App {
             // Then reset the trip view model with a slight delay to avoid conflicts
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // Reset the trip view model
+                self.tripViewModel.reset()
+            }
+        }
+        
+        // Add observer for stopping all listeners (before account deletion)
+        NotificationCenter.default.addObserver(forName: .stopAllListeners, object: nil, queue: .main) { [self] _ in
+            print("Received stop all listeners notification")
+            self.tripViewModel.stopAllListeners()
+        }
+        
+        // Add observer for account deletion notifications
+        NotificationCenter.default.addObserver(forName: .userAccountDeleted, object: nil, queue: .main) { [self] _ in
+            print("Received user account deletion notification")
+            // First trigger the UI transition back to welcome screen
+            self.userHasSignedOut = true
+            self.hasCompletedSetup = false
+            
+            // Then reset the trip view model with a slight delay to avoid conflicts
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Reset the trip view model completely
                 self.tripViewModel.reset()
             }
         }

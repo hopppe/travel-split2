@@ -1,6 +1,6 @@
 //
 //  BalancesViews.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

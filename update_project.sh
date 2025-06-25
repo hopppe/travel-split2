@@ -7,7 +7,7 @@ chmod +x update_project.sh
 echo "Adding new files to the project..."
 
 # Create a temporary file for the pbxproj file
-PBXPROJ_FILE="Free Split.xcodeproj/project.pbxproj"
+PBXPROJ_FILE="Split Pro.xcodeproj/project.pbxproj"
 TEMP_FILE="temp_project.pbxproj"
 
 # Check if the project file exists
@@ -24,15 +24,15 @@ echo "Adding new files to the project..."
 
 # List of new files to add
 NEW_FILES=(
-    "free split/Views/TripDetail/TripDetailView.swift"
-"free split/Views/TripDetail/ExpensesViews.swift"
-"free split/Views/TripDetail/BalancesViews.swift"
-"free split/Views/TripDetail/ParticipantsViews.swift"
-"free split/Views/TripDetail/Components/TabControlView.swift"
-"free split/Views/TripDetail/Components/SharedComponents.swift"
-"free split/Views/TripDetail/ExpenseSheets/AddExpenseSheet.swift"
-"free split/Views/TripDetail/ExpenseSheets/EditExpenseSheet.swift"
-"free split/Views/TripDetail/ParticipantSheets/AddParticipantSheet.swift"
+    "Split Pro/Views/TripDetail/TripDetailView.swift"
+"Split Pro/Views/TripDetail/ExpensesViews.swift"
+"Split Pro/Views/TripDetail/BalancesViews.swift"
+"Split Pro/Views/TripDetail/ParticipantsViews.swift"
+"Split Pro/Views/TripDetail/Components/TabControlView.swift"
+"Split Pro/Views/TripDetail/Components/SharedComponents.swift"
+"Split Pro/Views/TripDetail/ExpenseSheets/AddExpenseSheet.swift"
+"Split Pro/Views/TripDetail/ExpenseSheets/EditExpenseSheet.swift"
+"Split Pro/Views/TripDetail/ParticipantSheets/AddParticipantSheet.swift"
 )
 
 # Print the list of new files
@@ -44,7 +44,7 @@ done
 echo "Project file updated successfully!"
 echo "Please open the project in Xcode and manually add the new files to the project."
 echo "1. Right-click on the 'Views' group in the project navigator"
-echo "2. Select 'Add Files to \"free split\"...'"
+echo "2. Select 'Add Files to \"Split Pro\"...'"
 echo "3. Navigate to and select the 'TripDetail' folder"
 echo "4. Make sure 'Create groups' is selected and click 'Add'"
 echo "5. Build and run the project" 

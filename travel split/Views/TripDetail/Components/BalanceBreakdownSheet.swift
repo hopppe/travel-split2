@@ -1,6 +1,6 @@
 //
 //  BalanceBreakdownSheet.swift
-//  free split
+//  Split Pro
 //
 //  Created by Ethan Hoppe on 4/8/25.
 //
