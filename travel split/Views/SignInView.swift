@@ -12,6 +12,9 @@ struct SignInView: View {
     @State private var showError = false
     @State private var showResetPassword = false
     
+    // Language manager for localization updates
+    @EnvironmentObject var languageManager: LanguageManager
+    
     init(hasCompletedSetup: Binding<Bool> = .constant(false)) {
         self._hasCompletedSetup = hasCompletedSetup
     }
@@ -20,12 +23,13 @@ struct SignInView: View {
         NavigationView {
             Form {
                 Section {
-                    TextField("Email", text: $email)
+                    TextField("email".localized, text: $email)
                         .textContentType(.emailAddress)
                         .autocapitalization(.none)
                         .keyboardType(.emailAddress)
+                        .safeRTLTextField()
                     
-                    SecureField("Password", text: $password)
+                    SecureField("password".localized, text: $password)
                         .textContentType(.password)
                 }
                 
@@ -35,7 +39,7 @@ struct SignInView: View {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle())
                         } else {
-                            Text("Sign In")
+                            Text("sign_in".localized)
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -43,33 +47,34 @@ struct SignInView: View {
                 }
                 
                 Section {
-                    Button("Forgot Password?") {
+                    Button("reset_password".localized) {
                         showResetPassword = true
                     }
                 }
             }
-            .navigationTitle("Sign In")
+            .navigationTitle("sign_in".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK") { }
+            .alert("error".localized, isPresented: $showError) {
+                Button("ok".localized) { }
             } message: {
                 Text(authService.errorMessage ?? "An unknown error occurred")
             }
-            .alert("Reset Password", isPresented: $showResetPassword) {
-                TextField("Email", text: $email)
-                Button("Cancel", role: .cancel) { }
-                Button("Send Reset Link") {
+            .alert("reset_password".localized, isPresented: $showResetPassword) {
+                TextField("email".localized, text: $email)
+                    .safeRTLTextField()
+                Button("cancel".localized, role: .cancel) { }
+                Button("send_reset_link".localized) {
                     resetPassword()
                 }
             } message: {
-                Text("Enter your email address to receive a password reset link.")
+                Text("enter_email_reset".localized)
             }
         }
     }

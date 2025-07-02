@@ -1,6 +1,6 @@
 //
 //  CurrencyPickerView.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

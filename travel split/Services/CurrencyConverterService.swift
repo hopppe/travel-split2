@@ -1,6 +1,6 @@
 //
 //  CurrencyConverterService.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -38,7 +38,9 @@ class CurrencyConverterService {
         "UAH": 27.0,     // Ukrainian Hryvnia
         "NGN": 410.0,    // Nigerian Naira
         "ZAR": 14.5,     // South African Rand
-        "SAR": 3.75      // Saudi Riyal
+        "SAR": 3.75,     // Saudi Riyal
+        "JOD": 0.71,     // Jordanian Dinar
+        "AED": 3.67      // UAE Dirham
     ]
     
     // Convert amount from one currency to another
@@ -76,7 +78,9 @@ class CurrencyConverterService {
             "UAH": "₴",
             "NGN": "₦",
             "ZAR": "R",
-            "SAR": "﷼"
+            "SAR": "﷼",
+            "JOD": "JD",
+            "AED": "د.إ"
         ]
         
         return exchangeRates.keys.sorted().map { code in

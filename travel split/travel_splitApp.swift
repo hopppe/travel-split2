@@ -1,6 +1,6 @@
 //
 //  travel_splitApp.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -24,6 +24,9 @@ struct TravelSplitApp: App {
     
     // For tracking sign out
     @State private var userHasSignedOut = false
+    
+    // Language manager for localization
+    @StateObject private var languageManager = LanguageManager.shared
     
     // Initialize Firebase first
     init() {
@@ -96,6 +99,8 @@ struct TravelSplitApp: App {
                 // Show welcome screen for new users or after sign out
                 WelcomeView(tripViewModel: tripViewModel, hasCompletedSetup: $hasCompletedSetup)
                     .tint(.indigo) // Add consistent tint color
+                    .environmentObject(languageManager) // Inject language manager
+                    .withRTLSupport() // Apply RTL support
                     .onAppear {
                         // Reset the sign out flag when the welcome view appears
                         userHasSignedOut = false
@@ -104,6 +109,8 @@ struct TravelSplitApp: App {
                 // Show main app interface for existing users
                 TripsListView(viewModel: tripViewModel)
                     .tint(.indigo) // Set app accent color
+                    .environmentObject(languageManager) // Inject language manager
+                    .withRTLSupport() // Apply RTL support
                     .onAppear {
                         // Set up appearance
                         configureAppearance()
@@ -120,6 +127,8 @@ struct TravelSplitApp: App {
                     }
                     .sheet(isPresented: $showJoinTripSheet) {
                         JoinTripWithCodeView(viewModel: tripViewModel, inviteCode: inviteCode)
+                            .environmentObject(languageManager)
+                            .withRTLSupport()
                     }
                     .sheet(isPresented: $showClaimSheet, onDismiss: {
                         // Reset the view model's flag when the sheet is dismissed
@@ -130,6 +139,8 @@ struct TravelSplitApp: App {
                             viewModel: tripViewModel,
                             showClaimSheet: $showClaimSheet
                         )
+                        .environmentObject(languageManager)
+                        .withRTLSupport()
                     }
             }
         }
@@ -203,30 +214,43 @@ struct TravelSplitApp: App {
             .store(in: &tripViewModel.cancellables)
     }
     
-    // Handle incoming URLs 
+    // Handle incoming URLs (both Universal Links and custom URL schemes)
     private func handleIncomingURL(_ url: URL) {
         print("Received URL in app: \(url)")
+        print("URL scheme: \(url.scheme ?? "none")")
+        print("URL host: \(url.host ?? "none")")
+        print("URL path: \(url.path)")
         
         // Extract invite code from URL components
         var extractedInviteCode: String? = nil
         
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
-            // Check for invite code in query parameters
-            if let codeItem = components.queryItems?.first(where: { $0.name == "code" }),
-               let inviteCode = codeItem.value {
-                print("Found invite code in query parameters: \(inviteCode)")
-                extractedInviteCode = inviteCode
-            }
-            
-            // Check for invite code in path components
-            if extractedInviteCode == nil {
+            // Handle Universal Links (https://equisplit.ingenuitylabs.net/join/ABC123)
+            if url.scheme == "https" && url.host == "equisplit.ingenuitylabs.net" {
                 let pathComponents = components.path.components(separatedBy: "/")
-                if pathComponents.count >= 2 && 
-                   (pathComponents[1] == "join" || pathComponents[1] == "invite") && 
-                   pathComponents.count >= 3 {
+                if pathComponents.count >= 3 && pathComponents[1] == "join" {
                     let inviteCode = pathComponents[2]
-                    print("Found invite code in path: \(inviteCode)")
+                    print("Found invite code in Universal Link path: \(inviteCode)")
                     extractedInviteCode = inviteCode
+                }
+            }
+            // Handle custom URL scheme (travelsplit://join?code=ABC123)
+            else if url.scheme == "travelsplit" {
+                // Check for invite code in query parameters
+                if let codeItem = components.queryItems?.first(where: { $0.name == "code" }),
+                   let inviteCode = codeItem.value {
+                    print("Found invite code in custom scheme query parameters: \(inviteCode)")
+                    extractedInviteCode = inviteCode
+                }
+                
+                // Also check path components for custom scheme (travelsplit://join/ABC123)
+                if extractedInviteCode == nil {
+                    let pathComponents = components.path.components(separatedBy: "/")
+                    if pathComponents.count >= 2 && pathComponents[1] == "join" && pathComponents.count >= 3 {
+                        let inviteCode = pathComponents[2]
+                        print("Found invite code in custom scheme path: \(inviteCode)")
+                        extractedInviteCode = inviteCode
+                    }
                 }
             }
         }
@@ -236,9 +260,20 @@ struct TravelSplitApp: App {
             return
         }
         
+        print("Processing invite code: \(inviteCode)")
+        
         // Auto-join the trip directly
         tripViewModel.autoJoinTrip(withInviteCode: inviteCode) { success in
-            if !success {
+            if success {
+                print("Successfully joined trip via deep link - navigating to expenses page")
+                // Successfully joined trip - navigate to the trip's expenses page
+                DispatchQueue.main.async {
+                    // The trip should now be set as currentTrip in the view model
+                    // The main TripsListView will automatically navigate to TripDetailView
+                    // and we want to show the expenses tab (tab 0)
+                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToExpenses"), object: nil)
+                }
+            } else {
                 // Check if we need to show the claim sheet instead
                 if self.tripViewModel.showParticipantClaimingView {
                     // Set showClaimSheet to true to ensure the claim view appears
@@ -300,15 +335,15 @@ struct JoinTripWithCodeView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Enter the invite code to join a trip.")
+                    Text("enter_invite_code".localized)
                         .padding(.vertical, 8)
                     
-                    TextField("Invite Code", text: $manualCode)
+                    TextField("invite_code".localized, text: $manualCode)
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                         .padding(.vertical, 8)
                     
-                    Button("Join Trip") {
+                    Button("join_trip".localized) {
                         joinTrip()
                     }
                     .buttonStyle(.borderedProminent)
@@ -323,15 +358,15 @@ struct JoinTripWithCodeView: View {
                     }
                 }
             }
-            .navigationTitle("Join Trip")
+            .navigationTitle("join_trip".localized)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .toolbar(content: {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
-            }
+            })
         }
     }
     

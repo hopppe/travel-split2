@@ -1,8 +1,8 @@
 //
 //  ClaimViewCoordinator.swift
-//  Split Pro
+//  EquiSplit
 //
-//  Created by Assistant on 3/5/25.
+//  Created by Ethan Hoppe on 3/5/25.
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ struct ClaimViewCoordinator: View {
         NavigationStack {
             VStack {
                 if let _ = viewModel.currentTrip, !viewModel.potentialClaimableParticipants.isEmpty {
-                    Text("Select a participant to join as")
+                    Text("select_participant_to_join_as".localized)
                         .font(.headline)
                         .padding()
                     
@@ -32,20 +32,22 @@ struct ClaimViewCoordinator: View {
                                             .foregroundColor(.indigo)
                                     )
                                 
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                                     Text(participant.name)
                                         .font(.headline)
+                                        .rtlAwareAlignment()
                                     
                                     if !participant.email.isEmpty {
                                         Text(participant.email)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
+                                            .rtlAwareAlignment()
                                     }
                                 }
                                 
                                 Spacer()
                                 
-                                Text("Claim")
+                                Text("claim".localized)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.accentColor)
@@ -54,13 +56,13 @@ struct ClaimViewCoordinator: View {
                         }
                     }
                     
-                    Button("Join as a new participant") {
+                    Button("join_as_new_participant".localized) {
                         joinAsNewParticipant()
                     }
                     .buttonStyle(.borderedProminent)
                     .padding()
                 } else {
-                    Text("No participants to claim")
+                    Text("no_participants_to_claim".localized)
                         .font(.headline)
                         .padding()
                     

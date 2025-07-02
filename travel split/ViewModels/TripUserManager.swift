@@ -1,6 +1,6 @@
 //
 //  TripUserManager.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 4/9/25.
 //
@@ -72,13 +72,13 @@ class TripUserManager {
             // Get the user's name with better priority order:
             // 1. Firebase display name
             // 2. Saved name in UserDefaults
-            // 3. "You" only as last resort
+            // 3. "user" only as last resort
             let userName: String
             if let displayName = firebaseUser.displayName, !displayName.isEmpty {
                 userName = displayName
             } else {
                 let savedName = UserDefaults.standard.string(forKey: "user_name")
-                if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
+                if let savedName = savedName, !savedName.isEmpty, savedName != "user" {
                     userName = savedName
                     
                     // Also update Firebase with this name to maintain consistency
@@ -92,7 +92,7 @@ class TripUserManager {
                         }
                     }
                 } else {
-                    userName = "You"
+                    userName = "user"
                 }
             }
             
@@ -108,7 +108,7 @@ class TripUserManager {
         // Check if we have a previously saved user ID
         if let savedUserId = UserDefaults.standard.string(forKey: "user_id") {
             let savedName = UserDefaults.standard.string(forKey: "user_name")
-            let userName = (savedName != nil && !savedName!.isEmpty && savedName != "You") ? savedName! : "You"
+            let userName = (savedName != nil && !savedName!.isEmpty && savedName != "user") ? savedName! : "user"
             let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
             
             // Create a temporary user with the saved ID
@@ -118,10 +118,10 @@ class TripUserManager {
         // Create a temporary user with a new UUID - but don't authenticate
         let tempId = UUID().uuidString
         UserDefaults.standard.set(tempId, forKey: "user_id")
-        UserDefaults.standard.set("You", forKey: "user_name")
+        UserDefaults.standard.set("user", forKey: "user_name")
         
         // Return a local placeholder user without Firebase authentication
-        return User(id: tempId, name: "You", email: "", profileImage: nil, isClaimed: true)
+        return User(id: tempId, name: "user", email: "", profileImage: nil, isClaimed: true)
     }
     
     // Helper function for signing in anonymously if needed

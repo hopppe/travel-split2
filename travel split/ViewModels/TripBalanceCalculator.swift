@@ -1,6 +1,6 @@
 //
 //  TripBalanceCalculator.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 4/9/25.
 //

@@ -13,6 +13,9 @@ struct SignUpView: View {
     @State private var isLoading = false
     @State private var showError = false
     
+    // Language manager for localization updates
+    @EnvironmentObject var languageManager: LanguageManager
+    
     init(hasCompletedSetup: Binding<Bool> = .constant(false)) {
         self._hasCompletedSetup = hasCompletedSetup
     }
@@ -20,22 +23,24 @@ struct SignUpView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Personal Information")) {
-                    TextField("Name", text: $name)
+                Section(header: Text("profile".localized)) {
+                    TextField("name".localized, text: $name)
                         .textContentType(.name)
                         .autocapitalization(.words)
+                        .safeRTLTextField()
                     
-                    TextField("Email", text: $email)
+                    TextField("email".localized, text: $email)
                         .textContentType(.emailAddress)
                         .autocapitalization(.none)
                         .keyboardType(.emailAddress)
+                        .safeRTLTextField()
                 }
                 
-                Section(header: Text("Security")) {
-                    SecureField("Password", text: $password)
+                Section(header: Text("password".localized)) {
+                    SecureField("password".localized, text: $password)
                         .textContentType(.newPassword)
                     
-                    SecureField("Confirm Password", text: $confirmPassword)
+                    SecureField("password".localized, text: $confirmPassword)
                         .textContentType(.newPassword)
                 }
                 
@@ -45,24 +50,24 @@ struct SignUpView: View {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle())
                         } else {
-                            Text("Sign Up")
+                            Text("create_account".localized)
                                 .frame(maxWidth: .infinity)
                         }
                     }
                     .disabled(!isFormValid || isLoading)
                 }
             }
-            .navigationTitle("Create Account")
+            .navigationTitle("create_account".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK") { }
+            .alert("error".localized, isPresented: $showError) {
+                Button("ok".localized) { }
             } message: {
                 Text(authService.errorMessage ?? "An unknown error occurred")
             }

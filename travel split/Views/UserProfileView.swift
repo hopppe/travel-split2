@@ -3,6 +3,7 @@ import FirebaseAuth
 
 struct UserProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var languageManager: LanguageManager
     @StateObject private var authService = AuthenticationService.shared
     @ObservedObject var tripViewModel: TripViewModel
     
@@ -28,17 +29,19 @@ struct UserProfileView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Profile")) {
-                    TextField("Name", text: $userName)
+                Section(header: Text("profile".localized)) {
+                    TextField("name".localized, text: $userName)
                         .textContentType(.name)
                         .autocapitalization(.words)
+                        .safeRTLTextField()
                     
                     if !isAnonymousUser {
-                        TextField("Email", text: $userEmail)
+                        TextField("email".localized, text: $userEmail)
                             .textContentType(.emailAddress)
                             .autocapitalization(.none)
                             .keyboardType(.emailAddress)
                             .disabled(true)
+                            .safeRTLTextField()
                     }
                     
                     if isLoading {
@@ -47,7 +50,7 @@ struct UserProfileView: View {
                             .frame(maxWidth: .infinity)
                     } else {
                         Button(action: saveProfile) {
-                            Text(isAnonymousUser ? "Save Name" : "Update Profile")
+                            Text(isAnonymousUser ? "save_name".localized : "update_profile".localized)
                                 .frame(maxWidth: .infinity)
                         }
                         .disabled(userName.isEmpty || isLoading)
@@ -55,39 +58,59 @@ struct UserProfileView: View {
                 }
                 
                 if isAnonymousUser {
-                    Section(header: Text("Account")) {
-                        Button("Sign In") {
+                    Section(header: Text("account".localized)) {
+                        Button("sign_in".localized) {
                             showSignIn = true
                         }
                         
-                        Button("Create Account") {
+                        Button("create_account".localized) {
                             showSignUp = true
                         }
                         
-                        Button("Delete All Data", role: .destructive) {
+                        Button("delete_all_data".localized, role: .destructive) {
                             showDeleteAccountConfirmation = true
                         }
                         .disabled(isDeletingAccount)
                     }
                 } else {
-                    Section(header: Text("Account Settings")) {
-                        Button("Sign Out", role: .destructive) {
+                    Section(header: Text("account_settings".localized)) {
+                        Button("sign_out".localized, role: .destructive) {
                             showSignOutConfirmation = true
                         }
                         
-                        Button("Delete Account", role: .destructive) {
+                        Button("delete_account".localized, role: .destructive) {
                             showDeleteAccountConfirmation = true
                         }
                         .disabled(isDeletingAccount)
                     }
                 }
                 
+                // Language section
+                Section(header: Text("language".localized)) {
+                    HStack {
+                        Text("select_language".localized)
+                            .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $languageManager.currentLanguage) {
+                            ForEach(LanguageManager.SupportedLanguage.allCases, id: \.self) { language in
+                                Text(language.nativeDisplayName).tag(language)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                    }
+                    .rtlHStack()
+                }
+                
                 // Feedback section
-                Section(header: Text("Feedback")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Please submit any feedback for the app:")
+                Section(header: Text("feedback".localized)) {
+                    VStack(alignment: languageAwareHorizontalAlignment, spacing: 8) {
+                        Text("feedback_message".localized)
                             .font(.body)
                             .foregroundColor(.primary)
+                            .rtlAwareAlignment()
                         
                         Button("ethan@ingenuitylabs.net") {
                             // Create mailto URL
@@ -97,26 +120,29 @@ struct UserProfileView: View {
                         }
                         .font(.body)
                         .foregroundColor(.blue)
+                        .rtlAwareAlignment()
                     }
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle(isInitialSetup ? "Welcome to EquiSplit" : "Settings")
+            .navigationTitle(isInitialSetup ? "welcome_to_equisplit".localized : "settings".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if !isInitialSetup {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button("cancel".localized) {
                             dismiss()
                         }
                     }
                 }
             }
             .sheet(isPresented: $showSignIn) {
-                SignInView(hasCompletedSetup: .constant(true))
+                                            SignInView(hasCompletedSetup: .constant(true))
+                                .environmentObject(languageManager)
             }
             .sheet(isPresented: $showSignUp) {
                 SignUpView(hasCompletedSetup: .constant(true))
+                    .environmentObject(languageManager)
             }
             .onAppear {
                 refreshUserState()
@@ -161,29 +187,30 @@ struct UserProfileView: View {
                     refreshUserState()
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
+            .forceRTL()
+            .alert("error".localized, isPresented: $showError) {
+                Button("ok".localized, role: .cancel) { }
             } message: {
                 Text(errorMessage)
             }
-            .alert("Sign Out Confirmation", isPresented: $showSignOutConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Sign Out", role: .destructive) {
+            .alert("sign_out_confirmation".localized, isPresented: $showSignOutConfirmation) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("sign_out".localized, role: .destructive) {
                     performSignOut()
                 }
             } message: {
-                Text("Are you sure you want to sign out?")
+                Text("are_you_sure_sign_out".localized)
             }
-            .alert(isAnonymousUser ? "Delete All Data" : "Delete Account", isPresented: $showDeleteAccountConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button(isAnonymousUser ? "Delete All Data" : "Delete Account", role: .destructive) {
+            .alert(isAnonymousUser ? "delete_all_data".localized : "delete_account".localized, isPresented: $showDeleteAccountConfirmation) {
+                Button("cancel".localized, role: .cancel) { }
+                Button(isAnonymousUser ? "delete_all_data".localized : "delete_account".localized, role: .destructive) {
                     performDeleteAccount()
                 }
             } message: {
                 if isAnonymousUser {
-                    Text("Are you sure you want to delete all your data? This action cannot be undone.\n\nAll your trips, expenses, and personal information will be permanently deleted from this device. You will be taken back to the welcome screen.")
+                    Text("delete_data_confirmation".localized)
                 } else {
-                    Text("Are you sure you want to delete your account? This action cannot be undone.\n\nYour account will be permanently deleted, but you will remain as a placeholder participant in any groups you've joined. Other group members will still be able to see your expenses and balances.")
+                    Text("delete_account_confirmation".localized)
                 }
             }
             .interactiveDismissDisabled(isInitialSetup)
@@ -205,9 +232,9 @@ struct UserProfileView: View {
                 // 4. Default to existing value
                 if let displayName = firebaseUser.displayName, !displayName.isEmpty {
                     userName = displayName
-                } else if userName.isEmpty || userName == "You" {
+                } else if userName.isEmpty || userName == "user" {
                     // Only update if current name is empty or default
-                    if tripViewModel.currentUser.name != "You" {
+                    if tripViewModel.currentUser.name != "user" {
                         userName = tripViewModel.currentUser.name
                     }
                 }
@@ -217,10 +244,10 @@ struct UserProfileView: View {
                 isAnonymousUser = true
                 
                 // For anonymous users, preserve their custom name if they set one
-                if userName.isEmpty || userName == "You" {
-                    // If current profile name is empty or default "You",
+                if userName.isEmpty || userName == "user" {
+                    // If current profile name is empty or default "user",
                     // check if the model has a custom name
-                    if tripViewModel.currentUser.name != "You" {
+                    if tripViewModel.currentUser.name != "user" {
                         userName = tripViewModel.currentUser.name
                     } else {
                         // Try to get name from Firebase
@@ -371,5 +398,5 @@ struct UserProfileView: View {
 }
 
 #Preview {
-    UserProfileView(tripViewModel: TripViewModel(currentUser: User.create(name: "You", email: "you@example.com")))
+    UserProfileView(tripViewModel: TripViewModel(currentUser: User.create(name: "user", email: "user@example.com")))
 } 

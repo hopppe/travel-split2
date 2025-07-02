@@ -1,4 +1,4 @@
-# Split Pro App Refactoring
+# EquiSplit App Refactoring
 
 ## Overview
 
@@ -11,7 +11,7 @@ This refactoring project aims to improve the codebase structure by breaking down
 Created a new directory structure for better organization:
 
 ```
-Split Pro/Views/TripDetail/
+EquiSplit/Views/TripDetail/
 ├── TripDetailView.swift           # Main container view
 ├── ExpensesViews.swift            # Expenses-related views
 ├── BalancesViews.swift            # Balances-related views
@@ -55,7 +55,7 @@ During the refactoring, we also addressed several bugs:
 To incorporate these changes into your Xcode project:
 
 1. Right-click on the 'Views' group in the project navigator
-2. Select 'Add Files to "Split Pro"...'
+2. Select 'Add Files to "EquiSplit"...'
 3. Navigate to and select the 'TripDetail' folder
 4. Make sure 'Create groups' is selected and click 'Add'
 5. Build and run the project

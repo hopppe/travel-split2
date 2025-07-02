@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join EquiSplit Group</title>
+    <meta name="description" content="You've been invited to join a group expense tracker on EquiSplit!">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .app-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .invite-message {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+        
+        .status-message {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .opening-app {
+            background: #e8f5e8;
+            color: #2d5a2d;
+            border: 2px solid #4caf50;
+        }
+        
+        .no-app {
+            background: #fff3e0;
+            color: #e65100;
+            border: 2px solid #ff9800;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: #000;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #333;
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4caf50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .invite-code {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin: 15px 0;
+            letter-spacing: 2px;
+        }
+        
+        .fallback-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="../app-icon.png" alt="EquiSplit" class="app-icon" onerror="this.style.display='none'">
+        <h1>Get EquiSplit</h1>
+        <p class="invite-message">You need EquiSplit to join this group!</p>
+        
+        <div class="status-message no-app">
+            <p><strong>Download EquiSplit to join the group</strong></p>
+            <p>You'll be redirected automatically, or tap the button below:</p>
+            <a href="https://apps.apple.com/app/id6744609929" class="download-btn" style="margin-top: 20px;">
+                📱 Download from App Store
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Extract invite code from URL path
+        const pathParts = window.location.pathname.split('/');
+        const inviteCode = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+        
+        console.log('Extracted invite code:', inviteCode);
+        
+        function attemptAppOpen() {
+            if (!inviteCode || inviteCode === 'join' || inviteCode === '') {
+                console.log('No valid invite code found - redirecting to App Store');
+                redirectToAppStore();
+                return;
+            }
+            
+            console.log('Universal Link should handle app opening automatically');
+            console.log('If you see this page, the app is not installed - redirecting to App Store');
+            
+            // Since this is a Universal Link page, if we're seeing this page at all,
+            // it means the app is not installed. Universal Links automatically
+            // open the app if it's installed, without ever showing this page.
+            
+            // Set up a short timer to redirect to App Store
+            const fallbackTimer = setTimeout(() => {
+                console.log('Redirecting to App Store');
+                redirectToAppStore();
+            }, 1500); // Shorter timeout since we know the app isn't installed
+            
+            // Clear the timer if page becomes hidden (shouldn't happen, but just in case)
+            const clearFallbackOnHidden = () => {
+                clearTimeout(fallbackTimer);
+                document.removeEventListener('visibilitychange', clearFallbackOnHidden);
+                window.removeEventListener('blur', clearFallbackOnHidden);
+            };
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    console.log('Page became hidden unexpectedly');
+                    clearFallbackOnHidden();
+                }
+            });
+            
+            window.addEventListener('blur', () => {
+                console.log('Window lost focus unexpectedly');
+                clearFallbackOnHidden();
+            });
+        }
+        
+        function redirectToAppStore() {
+            console.log('Redirecting to App Store');
+            // Direct redirect to App Store without any user interaction
+            try {
+                window.location.href = 'https://apps.apple.com/app/id6744609929';
+            } catch (e) {
+                console.log('Redirect failed, user can use manual link');
+                // If automatic redirect fails, the manual link is already visible
+            }
+        }
+        
+        // Start immediately when page loads
+        attemptAppOpen();
+    </script>
+</body>
+</html> 

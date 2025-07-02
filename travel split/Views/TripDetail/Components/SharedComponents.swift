@@ -1,6 +1,6 @@
 //
 //  SharedComponents.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -210,17 +210,19 @@ struct ExpenseCardView: View {
     
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 12) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                         Text(expense.title)
                             .font(.headline)
                             .foregroundColor(.primary)
+                            .rtlAwareAlignment()
                         
                         if let payer = payer {
-                            Text("Paid by \(payer.name)")
+                            Text("\("paid_by".localized) \(payer.name)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .rtlAwareAlignment()
                         }
                     }
                     
@@ -244,7 +246,7 @@ struct ExpenseCardView: View {
                     
                     Spacer()
                     
-                    Text("\(expense.shares.count) participants")
+                    Text("\(expense.shares.count) \("participants".localized)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

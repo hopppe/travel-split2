@@ -1,4 +1,4 @@
-# Split Pro Firebase Setup Guide
+# EquiSplit Firebase Setup Guide
 
 ## Configuration Steps
 

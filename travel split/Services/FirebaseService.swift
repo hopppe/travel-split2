@@ -1,5 +1,5 @@
 // FirebaseService.swift
-// Split Pro
+// EquiSplit
 //
 // Created for firebase integration and cloud data synchronization
 
@@ -334,39 +334,27 @@ class FirebaseService {
     
     // MARK: - Deep Linking
     
-    /// Create a deep link using direct URL scheme for development testing
-    func createDeepLink(inviteCode: String) -> URL {
-        // Create a direct URL scheme link for testing
+    /// Create a Universal Link for sharing that works with app installation detection
+    func createUniversalLink(inviteCode: String) -> URL {
+        // Use Universal Link that will redirect to App Store if app not installed
+        let universalLink = "https://equisplit.ingenuitylabs.net/join/\(inviteCode)"
+        print("Generated Universal Link: \(universalLink)")
+        return URL(string: universalLink)!
+    }
+    
+    /// Create a direct app URL scheme for fallback/testing
+    func createDirectAppLink(inviteCode: String) -> URL {
         let directURL = "travelsplit://join?code=\(inviteCode)"
-        print("Development direct URL for testing: \(directURL)")
+        print("Direct app URL for fallback: \(directURL)")
         return URL(string: directURL)!
-        
-        /* DYNALINKS IMPLEMENTATION (UNCOMMENT WHEN APP IS PUBLISHED)
-        
-        // Create a deep link URL that contains the invite code
-        let deepLink = "https://travelsplit.app/join?code=\(inviteCode)"
-        
-        // Create the Dynalinks URL - this format works without registering
-        // Format: https://{subdomain}.dynalinks.com/?link={deep_link}&ibi={ios_bundle_id}&apn={android_package_name}
-        let encodedDeepLink = deepLink.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? deepLink
-        let dynalinkURL = "https://travelsplit.dynalinks.com/?link=\(encodedDeepLink)&ibi=\(iosBundleId)&apn=\(androidPackageName)"
-        
-        print("Generated Dynalink: \(dynalinkURL)")
-        return URL(string: dynalinkURL)!
-        */
     }
     
     // Generate a shareable message for the invite code
     func generateShareMessage(inviteCode: String, tripName: String) -> String {
-        // Create deep link if possible, otherwise just use the invite code directly
-        let deepLink = createDeepLink(inviteCode: inviteCode)
+        // Use Universal Link for better user experience
+        let universalLink = createUniversalLink(inviteCode: inviteCode)
         
-        return """
-                                Join my group "\(tripName)" in EquiSplit!
-        
-        Link: \(deepLink)
-        Code: \(inviteCode)
-        """
+        return "Join my group \"\(tripName)\" in EquiSplit!\n\n\(universalLink)"
     }
     
     // Generate a unique ID for an unclaimed participant

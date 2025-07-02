@@ -1,10 +1,10 @@
-# Privacy Policy for Split Pro
+# Privacy Policy for EquiSplit
 
 **Last updated: June 23, 2025**
 
 ## Introduction
 
-Split Pro ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application Split Pro (the "App").
+EquiSplit ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application EquiSplit (the "App").
 
 By using our App, you agree to the collection and use of information in accordance with this Privacy Policy.
 
@@ -84,7 +84,7 @@ To delete your account and data:
 
 ## Children's Privacy
 
-Split Pro is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us, and we will take steps to remove such information.
+EquiSplit is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us, and we will take steps to remove such information.
 
 ## Third-Party Services
 
@@ -119,7 +119,7 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 If you have questions about this Privacy Policy or our privacy practices, please contact us at:
 
 **Email**: ethan@ingenuitylabs.net
-**App Support**: Through the Split Pro app settings
+**App Support**: Through the EquiSplit app settings
 
 ## Your California Privacy Rights
 
@@ -137,4 +137,4 @@ If you are located outside the United States, please note that we transfer your 
 
 ---
 
-This Privacy Policy is effective as of the date listed above and applies to all users of the Split Pro app. 
+This Privacy Policy is effective as of the date listed above and applies to all users of the EquiSplit app. 

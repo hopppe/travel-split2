@@ -1,6 +1,6 @@
 //
 //  travel_splitTests.swift
-//  Split ProTests
+//  EquiSplitTests
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

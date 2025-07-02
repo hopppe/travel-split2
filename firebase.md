@@ -23,15 +23,15 @@ struct YourApp: App {
   }
 }
 
-# Firebase Setup Guide for Split Pro
+# Firebase Setup Guide for EquiSplit
 
-This guide will walk you through setting up Firebase with your Split Pro app to enable trip sharing functionality between different users and devices.
+This guide will walk you through setting up Firebase with your EquiSplit app to enable trip sharing functionality between different users and devices.
 
 ## 1. Create a Firebase Project
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/)
 2. Click "Add project" and follow the prompts
-3. Name your project (e.g., "Split Pro")
+3. Name your project (e.g., "EquiSplit")
 4. Choose whether to enable Google Analytics (recommended)
 5. Follow the setup wizard to complete project creation
 

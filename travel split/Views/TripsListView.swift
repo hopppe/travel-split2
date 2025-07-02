@@ -1,6 +1,6 @@
 //
 //  TripsListView.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -25,6 +25,9 @@ struct TripsListView: View {
     // Add a state object for network monitoring
     @StateObject private var networkMonitor = NetworkMonitor.shared
     
+    // Language manager for localization updates
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -33,7 +36,7 @@ struct TripsListView: View {
                     HStack {
                         Image(systemName: "wifi.slash")
                             .foregroundColor(.white)
-                        Text("Offline Mode - Changes will sync when connection is restored")
+                        Text("offline_mode".localized)
                             .font(.caption)
                             .foregroundColor(.white)
                     }
@@ -54,7 +57,7 @@ struct TripsListView: View {
                             showingNewTripSheet = true
                         }, viewModel: viewModel)
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("No trips")
+                        .accessibilityLabel("no_trips".localized)
                     } else {
                         // Display list of trips
                         TripListContentView(
@@ -65,7 +68,7 @@ struct TripsListView: View {
                     }
                 }
             }
-            .navigationTitle("Groups")
+            .navigationTitle("groups".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
@@ -79,7 +82,7 @@ struct TripsListView: View {
                                 .lineLimit(1)
                         }
                     }
-                    .accessibilityLabel("Edit profile")
+                    .accessibilityLabel("edit_profile".localized)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -87,7 +90,7 @@ struct TripsListView: View {
                         onCreateTripTapped: { showingNewTripSheet = true },
                         onJoinTripTapped: { showingJoinTripSheet = true }
                     )
-                    .accessibilityLabel("Add options")
+                    .accessibilityLabel("add_options".localized)
                 }
             }
             .sheet(isPresented: $showingNewTripSheet) {
@@ -97,6 +100,7 @@ struct TripsListView: View {
                     tripName: $newTripName,
                     tripDescription: $newTripDescription
                 )
+                .environmentObject(languageManager)
             }
             .sheet(isPresented: $showingJoinTripSheet) {
                 JoinTripSheet(
@@ -104,6 +108,7 @@ struct TripsListView: View {
                     isPresented: $showingJoinTripSheet,
                     inviteCode: $joinTripCode
                 )
+                .environmentObject(languageManager)
             }
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileView(tripViewModel: viewModel)
@@ -116,7 +121,7 @@ struct TripsListView: View {
                 Alert(
                     title: Text(item.title),
                     message: Text(item.message),
-                    dismissButton: .default(Text("OK"))
+                    dismissButton: .default(Text("ok".localized))
                 )
             }
             .onAppear {
@@ -155,6 +160,7 @@ struct TripsListView: View {
                 }
             }
         }
+        .forceRTL()
     }
     
     // Computed property for the destination view
@@ -163,7 +169,7 @@ struct TripsListView: View {
             if let tripId = selectedTripId, let trip = viewModel.trips.first(where: { $0.id == tripId }) {
                 TripDetailView(viewModel: viewModel, trip: trip)
             } else {
-                Text("Trip not found")
+                Text("trip_not_found".localized)
             }
         }
     }
@@ -179,6 +185,19 @@ struct TripsListView: View {
                let tripId = userInfo["tripId"] as? String {
                 // Set the selected trip ID which will trigger the navigation link
                 self.selectedTripId = tripId
+            }
+        }
+        
+        // Add observer for navigating to expenses after joining via deep link
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NavigateToExpenses"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            // Navigate to the current trip's expenses page
+            if let currentTrip = self.viewModel.currentTrip {
+                print("Navigating to expenses page for trip: \(currentTrip.name)")
+                self.selectedTripId = currentTrip.id
             }
         }
     }
@@ -204,16 +223,11 @@ struct TripsListView: View {
     private func shareTrip() {
         guard let trip = viewModel.currentTrip else { return }
         
-        // Get the deep link URL from FirebaseService
-        let deepLinkURL = FirebaseService.shared.createDeepLink(inviteCode: trip.inviteCode)
-        
-        // Create a simple share message with just the essentials
-        let shareMessage = """
-                                        Join my group '\(trip.name)' in EquiSplit!
-        
-        Link: \(deepLinkURL)
-        Code: \(trip.inviteCode)
-        """
+        // Use the centralized share message generation
+        let shareMessage = FirebaseService.shared.generateShareMessage(
+            inviteCode: trip.inviteCode,
+            tripName: trip.name
+        )
         
         let activityVC = UIActivityViewController(
             activityItems: [shareMessage],
@@ -261,7 +275,7 @@ struct EmptyTripsView: View {
         VStack(spacing: 0) {
             // Fixed header
             HStack {
-                Text("Your Groups")
+                Text("your_groups".localized)
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
@@ -279,18 +293,20 @@ struct EmptyTripsView: View {
                         .accessibilityHidden(true)
                         .padding(.top, 60)
                     
-                    Text("No Groups Yet")
+                    Text("no_groups_yet".localized)
                         .font(.title2)
                         .fontWeight(.semibold)
+                        .rtlAwareAlignment(.center)
                     
-                    Text("Create a new group to start tracking expenses with friends")
+                    Text("create_group_description".localized)
                         .font(.body)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                         .padding(.horizontal)
+                        .rtlAwareAlignment(.center)
                     
                     Button(action: onCreateTripTapped) {
-                        Label("Create New Group", systemImage: "plus.circle.fill")
+                        Label("create_new_group".localized, systemImage: "plus.circle.fill")
                             .font(.headline)
                             .padding()
                             .frame(maxWidth: .infinity)
@@ -300,8 +316,8 @@ struct EmptyTripsView: View {
                     }
                     .padding(.horizontal, 40)
                     .padding(.top, 10)
-                    .accessibilityLabel("Create new group")
-                    .accessibilityHint("Creates a new group to track expenses")
+                    .accessibilityLabel("create_new_group".localized)
+                    .accessibilityHint("create_new_group_hint".localized)
                 }
                 .padding()
                 .frame(minHeight: 500) // Ensures there's space to pull
@@ -347,11 +363,11 @@ struct AddMenuButton: View {
     var body: some View {
         Menu {
             Button(action: onCreateTripTapped) {
-                Label("Create New Group", systemImage: "plus")
+                Label("create_new_group".localized, systemImage: "plus")
             }
             
             Button(action: onJoinTripTapped) {
-                Label("Join Group", systemImage: "person.badge.plus")
+                Label("join_group".localized, systemImage: "person.badge.plus")
             }
         } label: {
             Image(systemName: "plus")
@@ -374,7 +390,7 @@ struct TripListContentView: View {
         VStack(spacing: 0) {
             // Fixed header
             HStack {
-                Text("Your Groups")
+                Text("your_groups".localized)
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
@@ -402,7 +418,7 @@ struct TripListContentView: View {
                                 showingBalanceWarning = true
                             }
                         } label: {
-                            Label("Leave", systemImage: "door.right.hand.open")
+                            Label("leave".localized, systemImage: "door.right.hand.open")
                         }
                         .tint(.red)
                     }
@@ -412,7 +428,7 @@ struct TripListContentView: View {
                             viewModel.selectTrip(trip)
                             onShareTrip()
                         }) {
-                            Label("Share Group", systemImage: "square.and.arrow.up")
+                            Label("share_group".localized, systemImage: "square.and.arrow.up")
                         }
                         
                         Divider() // Visual separator
@@ -425,7 +441,7 @@ struct TripListContentView: View {
                                 showingBalanceWarning = true
                             }
                         }) {
-                            Label("Leave Group", systemImage: "door.right.hand.open")
+                            Label("leave_group".localized, systemImage: "door.right.hand.open")
                                 .foregroundColor(.red)
                         }
                     }
@@ -439,11 +455,11 @@ struct TripListContentView: View {
             }
         }
         .confirmationDialog(
-            "Leave Group",
+            "leave_group".localized,
             isPresented: $showingLeaveConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Leave Group", role: .destructive) {
+            Button("leave_group".localized, role: .destructive) {
                 if let trip = tripToLeave {
                     print("Attempting to leave trip: \(trip.name)")
                     viewModel.leaveTrip(trip: trip)
@@ -451,21 +467,29 @@ struct TripListContentView: View {
                 }
             }
             
-            Button("Cancel", role: .cancel) {
-                tripToLeave = nil
-            }
-        } message: {
-            Text("You will be removed from this group but other participants will still have access.")
-        }
-        .alert("Cannot Leave Group", isPresented: $showingBalanceWarning) {
-            Button("OK", role: .cancel) {
+            Button("cancel".localized, role: .cancel) {
                 tripToLeave = nil
             }
         } message: {
             if let trip = tripToLeave {
-                Text("You have an outstanding balance of \(viewModel.getUserBalanceString(trip)). You must settle all debts before leaving the group.")
+                if viewModel.isLastParticipantInTrip(trip) {
+                    Text("leave_group_last_participant".localized)
+                } else {
+                    Text("leave_group_confirmation".localized)
+                }
             } else {
-                Text("You must settle all debts before leaving the group.")
+                Text("leave_group_confirmation".localized)
+            }
+        }
+        .alert("cannot_leave_group".localized, isPresented: $showingBalanceWarning) {
+            Button("ok".localized, role: .cancel) {
+                tripToLeave = nil
+            }
+        } message: {
+            if let trip = tripToLeave {
+                Text("outstanding_balance_message".localized(with: viewModel.getUserBalanceString(trip)))
+            } else {
+                Text("settle_debts_message".localized)
             }
         }
     }
@@ -497,44 +521,84 @@ struct TripListContentView: View {
 struct TripRowView: View {
     let trip: Trip
     @ObservedObject var viewModel: TripViewModel
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(trip.name)
-                .font(.headline)
+        VStack(alignment: languageAwareHorizontalAlignment, spacing: 6) {
+            HStack {
+                Text(trip.name)
+                    .font(.headline)
+                    .multilineTextAlignment(languageAwareAlignment)
+                    .frame(maxWidth: .infinity, alignment: languageManager.isRTL ? .trailing : .leading)
+                Spacer(minLength: 0)
+            }
             
             HStack {
-                Image(systemName: "person.2.fill")
-                    .foregroundColor(.secondary)
-                    .font(.subheadline)
-                    .accessibilityHidden(true)
-                
-                Text("\(trip.participants.count) participants")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                if !trip.expenses.isEmpty {
-                    HStack(spacing: 4) {
-                        let balance = viewModel.getUserBalanceInTrip(trip)
-                        let balanceText = balance > 0 ? "owed" : (balance < 0 ? "owe" : "settled")
-                        
-                        Text(balanceText)
-                            .font(.caption)
-                            .foregroundColor(getBalanceColor(balance))
-                        
-                        Text("\(trip.baseCurrencySymbol)\(abs(balance), specifier: "%.2f")")
-                            .font(.subheadline.bold())
-                            .foregroundColor(getBalanceColor(balance))
-                            .accessibilityLabel("\(balanceText) \(formatCurrency(abs(balance)))")
+                if languageManager.isRTL {
+                    // RTL layout: balance first, then participants info
+                    if !trip.expenses.isEmpty {
+                        HStack(spacing: 4) {
+                            let balance = viewModel.getUserBalanceInTrip(trip)
+                            let balanceText = balance > 0 ? "owed".localized : (balance < 0 ? "owe".localized : "settled".localized)
+                            
+                            Text("\(trip.baseCurrencySymbol)\(abs(balance), specifier: "%.2f")")
+                                .font(.subheadline.bold())
+                                .foregroundColor(getBalanceColor(balance))
+                                .accessibilityLabel("\(balanceText) \(formatCurrency(abs(balance)))")
+                            
+                            Text(balanceText)
+                                .font(.caption)
+                                .foregroundColor(getBalanceColor(balance))
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(trip.participants.count) \("participants".localized)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.trailing)
+                    
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .accessibilityHidden(true)
+                } else {
+                    // LTR layout: participants info first, then balance
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .accessibilityHidden(true)
+                    
+                    Text("\(trip.participants.count) \("participants".localized)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                    
+                    Spacer()
+                    
+                    if !trip.expenses.isEmpty {
+                        HStack(spacing: 4) {
+                            let balance = viewModel.getUserBalanceInTrip(trip)
+                            let balanceText = balance > 0 ? "owed".localized : (balance < 0 ? "owe".localized : "settled".localized)
+                            
+                            Text(balanceText)
+                                .font(.caption)
+                                .foregroundColor(getBalanceColor(balance))
+                            
+                            Text("\(trip.baseCurrencySymbol)\(abs(balance), specifier: "%.2f")")
+                                .font(.subheadline.bold())
+                                .foregroundColor(getBalanceColor(balance))
+                                .accessibilityLabel("\(balanceText) \(formatCurrency(abs(balance)))")
+                        }
                     }
                 }
             }
         }
+        .environment(\.layoutDirection, languageManager.layoutDirection)
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) participants, \(trip.expenses.isEmpty ? "No expenses" : "\(getUserBalanceDescription(trip))")")
+        .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) \("participants".localized), \(trip.expenses.isEmpty ? "no_expenses".localized : "\(getUserBalanceDescription(trip))")")
     }
     
     /// Get color based on balance status
@@ -551,7 +615,7 @@ struct TripRowView: View {
     /// Get user balance description for accessibility
     private func getUserBalanceDescription(_ trip: Trip) -> String {
         let balance = viewModel.getUserBalanceInTrip(trip)
-        let balanceText = balance > 0 ? "You are owed" : (balance < 0 ? "You owe" : "You are settled up")
+        let balanceText = balance > 0 ? "you_are_owed".localized : (balance < 0 ? "you_owe".localized : "you_are_settled_up".localized)
         return "\(balanceText) \(formatCurrency(abs(balance)))"
     }
     
@@ -618,8 +682,8 @@ struct TripPreviousParticipantView: View {
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(participant.name)\(isSelected ? ", selected" : "")")
-        .accessibilityHint(isSelected ? "Double tap to remove" : "Double tap to add")
+        .accessibilityLabel("\(participant.name)\(isSelected ? ", \("selected".localized)" : "")")
+        .accessibilityHint(isSelected ? "double_tap_to_remove".localized : "double_tap_to_add".localized)
     }
 }
 
@@ -635,15 +699,20 @@ struct NewTripSheet: View {
     @State private var previousParticipants: [User] = []
     @State private var selectedPreviousParticipants = Set<String>()
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Group Details")) {
-                    TextField("Group Name", text: $tripName)
-                        .accessibilityLabel("Group name")
+                Section(header: Text("group_details".localized)) {
+                    TextField("group_name".localized, text: $tripName)
+                        .safeRTLTextField()
+                        .accessibilityLabel("group_name".localized)
                     
-                    TextField("Description (Optional)", text: $tripDescription)
-                        .accessibilityLabel("Group description")
+                    TextField("description_optional".localized, text: $tripDescription)
+                        .safeRTLTextField()
+                        .accessibilityLabel("description_optional".localized)
                 }
                 
                 // Participants section that can be toggled
@@ -662,8 +731,9 @@ struct NewTripSheet: View {
                         }
                     }) {
                         HStack {
-                            Text(showingParticipantsSection ? "Hide Participants" : "Add Participants")
+                            Text(showingParticipantsSection ? "hide_participants".localized : "add_participants".localized)
                                 .foregroundColor(.accentColor)
+                                .rtlAwareAlignment()
                             
                             Spacer()
                             
@@ -676,7 +746,7 @@ struct NewTripSheet: View {
                 if showingParticipantsSection {
                     // Previous participants suggestions
                     if !previousParticipants.isEmpty {
-                        Section(header: Text("Previous Participants")) {
+                        Section(header: Text("previous_participants".localized)) {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(previousParticipants) { participant in
@@ -695,10 +765,11 @@ struct NewTripSheet: View {
                         }
                     }
                     
-                    Section(header: Text("Add Participants")) {
+                    Section(header: Text("add_participants".localized)) {
                         ForEach(0..<participants.count, id: \.self) { index in
                             VStack(spacing: 12) {
-                                TextField("Name", text: $participants[index].name)
+                                TextField("name".localized, text: $participants[index].name)
+                                    .safeRTLTextField()
                                     .padding(.vertical, 4)
                             }
                             .padding(.bottom, 8)
@@ -722,8 +793,9 @@ struct NewTripSheet: View {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(.accentColor)
-                                Text("Add More")
+                                Text("add_more".localized)
                                     .foregroundColor(.accentColor)
+                                    .rtlAwareAlignment()
                             }
                         }
                         .padding(.vertical, 8)
@@ -732,29 +804,31 @@ struct NewTripSheet: View {
                 
                 Section {
                     Text(showingParticipantsSection 
-                         ? "Add participants now or you can add them later after creating the group."
-                         : "Enter details for your new group. You can add participants and expenses after creating the group.")
+                         ? "group_creation_description_with_participants".localized
+                         : "group_creation_description_without_participants".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
                 }
             }
-            .navigationTitle("New Group")
+            .navigationTitle("new_group".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
+                    Button("create".localized) {
                         createTrip()
                     }
                     .disabled(!isFormValid)
                 }
             }
         }
+        .forceRTL()
     }
     
     // Form validation
@@ -828,39 +902,45 @@ struct JoinTripSheet: View {
     @Binding var isPresented: Bool
     @Binding var inviteCode: String
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Enter Invite Code")) {
-                    TextField("Invite Code", text: $inviteCode)
+                Section(header: Text("enter_invite_code_header".localized)) {
+                    TextField("invite_code".localized, text: $inviteCode)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                        .accessibilityLabel("Group invite code")
+                        .safeRTLTextField()
+                        .accessibilityLabel("group_invite_code".localized)
                 }
                 
                 Section {
-                    Text("Enter the code shared with you to join an existing group. This code is found in the group's share menu.")
+                    Text("join_group_description".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
                 }
             }
-            .navigationTitle("Join Group")
+            .navigationTitle("join_group_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Join") {
+                    Button("join".localized) {
                         joinTrip()
                     }
                     .disabled(inviteCode.isEmpty)
                 }
             }
         }
+        .forceRTL()
         .fullScreenCover(isPresented: $viewModel.showParticipantClaimingView) {
             if let trip = viewModel.currentTrip, !viewModel.potentialClaimableParticipants.isEmpty {
                 ParticipantClaimView(
@@ -868,13 +948,7 @@ struct JoinTripSheet: View {
                     potentialMatches: viewModel.potentialClaimableParticipants,
                     trip: trip
                 )
-            }
-        }
-        .onChange(of: viewModel.showParticipantClaimingView) { newValue in
-            // When the participant claim view is dismissed, also dismiss this sheet
-            if !newValue {
-                inviteCode = ""
-                isPresented = false
+                .environmentObject(languageManager)
             }
         }
     }

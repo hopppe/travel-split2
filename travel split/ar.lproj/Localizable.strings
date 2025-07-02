@@ -1,0 +1,380 @@
+/* 
+   Localizable.strings (Arabic)
+   EquiSplit
+   
+   Created for Arabic localization support
+*/
+
+// MARK: - App Name and Core
+"app_name" = "إكويسبليت";
+
+// MARK: - Welcome Screen
+"welcome_title" = "قسم مصاريف المجموعة";
+"welcome_subtitle" = "تتبع وقسم التكاليف بسهولة مع الأصدقاء في مغامرتك القادمة";
+"continue_without_email" = "المتابعة بدون بريد إلكتروني";
+"enter_your_name" = "أدخل اسمك";
+"continue" = "متابعة";
+"sign_in" = "تسجيل الدخول";
+"create_account" = "إنشاء حساب";
+
+// MARK: - Authentication
+"name" = "الاسم";
+"email" = "البريد الإلكتروني";
+"password" = "كلمة المرور";
+"cancel" = "إلغاء";
+"ok" = "موافق";
+"done" = "تم";
+"save" = "حفظ";
+"delete" = "حذف";
+"edit" = "تعديل";
+
+// MARK: - Trip Management
+"groups" = "المجموعات";
+"my_groups" = "مجموعاتي";
+"create_new_group" = "إنشاء مجموعة جديدة";
+"join_group" = "انضمام للمجموعة";
+"participants" = "مشاركين";
+"participant" = "مشارك";
+"owed" = "مستحق";
+"owe" = "مدين";
+"settled" = "مسوى";
+"leave_group" = "مغادرة المجموعة";
+"delete_group" = "حذف المجموعة";
+"group_name" = "اسم المجموعة";
+"group_description" = "الوصف";
+
+// MARK: - Expenses
+"expenses" = "المصروفات";
+"no_expenses_yet" = "لا توجد مصروفات حتى الآن";
+"add_first_expense" = "أضف مصروفك الأول لبدء التتبع";
+"add_expense" = "إضافة مصروف";
+"expense_info" = "معلومات المصروف";
+"description" = "الوصف";
+"amount" = "المبلغ";
+"paid_by" = "دفع بواسطة";
+"split_between" = "قسم بين";
+"save_expense" = "حفظ المصروف";
+"update_expense" = "تحديث المصروف";
+"edit_expense" = "تعديل المصروف";
+"delete_expense" = "حذف المصروف";
+"on_date" = "في";
+"select_date" = "اختر التاريخ";
+
+// MARK: - Balances
+"balances" = "الأرصدة";
+"all_settled_up" = "تم التسوية بالكامل!";
+"everyone_paid_share" = "الجميع دفع نصيبه العادل";
+"record_payment" = "تسجيل دفعة";
+"no_expenses_calculate" = "لا توجد مصروفات للحساب";
+"add_expenses_see_balances" = "أضف مصروفات لترى من يدين بماذا";
+"all_settled_up_lowercase" = "تم التسوية بالكامل";
+"total_trip_cost" = "إجمالي تكلفة الرحلة";
+"average_per_person" = "المتوسط للشخص الواحد";
+"balance_details" = "تفاصيل الرصيد";
+"contributing_expenses" = "المصروفات المساهمة";
+"person_totals" = "إجماليات الأشخاص";
+"how_we_simplified" = "كيف قمنا بالتبسيط";
+"balance_simplification_explanation" = "يُظهر هذا الرصيد الدين المبسط بعد حساب جميع المصروفات المشتركة بين هذين الشخصين.";
+
+// MARK: - Payments
+"payment_details" = "تفاصيل الدفع";
+"from" = "من";
+"to" = "إلى";
+"settle_all_balances" = "تسوية جميع أرصدتي";
+"select_currency" = "اختر العملة";
+"payment_amount" = "مبلغ الدفع";
+
+// MARK: - Participants
+"add_participant" = "إضافة مشارك";
+"found_existing_participants" = "وجدنا مشاركين موجودين قد يكونوا أنت";
+"claim_participant_description" = "تم العثور على مشارك بنفس الاسم أو البريد الإلكتروني في هذه الرحلة. هل تريد ادعاء هذا المشارك كحسابك؟";
+"claim" = "ادعاء";
+"join_as_new_participant" = "انضمام كمشارك جديد";
+"select_participant_to_claim" = "اختر مشارك لادعائه";
+"your_name" = "اسمك";
+"edit_name" = "تعديل الاسم";
+"update_name_group_only" = "سيؤدي هذا إلى تحديث اسمك في هذه المجموعة فقط.";
+"select_participant_to_join_as" = "اختر مشارك للانضمام باسمه";
+"no_participants_to_claim" = "لا يوجد مشاركين لادعائهم";
+"claim_participant_footer" = "إذا لم يكن أي من هؤلاء المشاركين أنت، انضم كمشارك جديد بدلاً من ذلك.";
+"paid_by_colon" = "دفع من قبل:";
+"total_colon" = "الإجمالي:";
+"paid_suffix" = "دفع";
+
+// MARK: - Profile & Settings
+"profile" = "الملف الشخصي";
+"settings" = "الإعدادات";
+"account" = "الحساب";
+"account_settings" = "إعدادات الحساب";
+"sign_out" = "تسجيل الخروج";
+"delete_account" = "حذف الحساب";
+"feedback" = "التعليقات";
+"save_name" = "حفظ الاسم";
+"update_profile" = "تحديث الملف الشخصي";
+"delete_all_data" = "حذف جميع البيانات";
+
+// MARK: - Navigation
+"join_trip" = "انضمام للرحلة";
+"invite_code" = "رمز الدعوة";
+"enter_invite_code" = "أدخل رمز الدعوة للانضمام إلى الرحلة.";
+"welcome_to_equisplit" = "مرحباً بك في إكويسبليت";
+
+// MARK: - Alerts & Confirmations
+"error" = "خطأ";
+"sign_out_confirmation" = "تأكيد تسجيل الخروج";
+"are_you_sure_sign_out" = "هل أنت متأكد من رغبتك في تسجيل الخروج؟";
+"cannot_leave_group" = "لا يمكن مغادرة المجموعة";
+"outstanding_balance_warning" = "لديك رصيد مستحق قدره %@. يجب تسوية جميع الديون قبل مغادرة المجموعة.";
+"last_participant_warning" = "أنت آخر مشارك في هذه المجموعة. ستحذف المجموعة نهائياً ولا يمكن استردادها.";
+"leave_group_warning" = "ستتم إزالتك من هذه المجموعة لكن المشاركين الآخرين سيظل لديهم إمكانية الوصول.";
+"delete_data_confirmation" = "هل أنت متأكد من رغبتك في حذف جميع بياناتك؟ هذا الإجراء لا يمكن التراجع عنه.\n\nستحذف جميع رحلاتك ومصروفاتك ومعلوماتك الشخصية نهائياً من هذا الجهاز. ستعود إلى شاشة الترحيب.";
+"delete_account_confirmation" = "هل أنت متأكد من رغبتك في حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه.\n\nسيحذف حسابك نهائياً، لكنك ستبقى كمشارك وهمي في أي مجموعات انضممت إليها. سيظل بإمكان أعضاء المجموعة الآخرين رؤية مصروفاتك وأرصدتك.";
+
+// MARK: - Currency
+"change_currency" = "تغيير العملة";
+"select_currency_button" = "اختر العملة";
+"expense_amount" = "مبلغ المصروف";
+
+// MARK: - Actions
+"share_group" = "مشاركة المجموعة";
+"reset_password" = "إعادة تعيين كلمة المرور";
+"send_reset_link" = "إرسال رابط الإعادة";
+"enter_email_reset" = "أدخل عنوان بريدك الإلكتروني لتلقي رابط إعادة تعيين كلمة المرور.";
+
+// MARK: - Feedback
+"feedback_message" = "يرجى إرسال أي تعليقات حول التطبيق:";
+
+// MARK: - Accessibility
+"expense_description" = "وصف المصروف";
+"select_who_paid" = "اختر من دفع هذا المصروف";
+"select_expense_date" = "اختر تاريخ المصروف";
+"add_first_expense_hint" = "ينشئ مصروف جديد لهذه الرحلة";
+"record_payment_hint" = "تسجيل دفعة";
+"claim_participant_hint" = "ادعاء هذا المشارك كحسابك";
+"join_new_participant_hint" = "انضمام للرحلة كمشارك جديد";
+
+// MARK: - Status Messages
+"you_are_owed" = "مستحق لك";
+"you_owe" = "أنت مدين";
+"you_are_settled_up" = "أنت مسوى";
+"paid_by_format" = "دفع بواسطة %@";
+"total_format" = "الإجمالي: %@";
+
+// MARK: - Empty States
+"no_trips_yet" = "لا توجد رحلات حتى الآن";
+"create_first_trip" = "أنشئ رحلتك الأولى للبدء";
+
+// MARK: - Language Settings
+"language" = "اللغة";
+"select_language" = "اختر اللغة";
+
+// MARK: - Additional Authentication
+"reset_password" = "إعادة تعيين كلمة المرور";
+"send_reset_link" = "إرسال رابط الإعادة";
+"enter_email_reset" = "أدخل عنوان بريدك الإلكتروني لتلقي رابط إعادة تعيين كلمة المرور.";
+
+// MARK: - Profile and Settings
+"profile" = "الملف الشخصي";
+"account" = "الحساب";
+"account_settings" = "إعدادات الحساب";
+"settings" = "الإعدادات";
+"save_name" = "حفظ الاسم";
+"update_profile" = "تحديث الملف الشخصي";
+"delete_all_data" = "حذف جميع البيانات";
+"delete_account" = "حذف الحساب";
+"sign_out" = "تسجيل الخروج";
+"feedback" = "التعليقات";
+"feedback_message" = "يرجى إرسال أي تعليقات حول التطبيق:";
+"welcome_to_equisplit" = "مرحباً بك في إكويسبليت";
+
+// MARK: - Confirmation Messages
+"sign_out_confirmation" = "تأكيد تسجيل الخروج";
+"are_you_sure_sign_out" = "هل أنت متأكد من رغبتك في تسجيل الخروج؟";
+"delete_data_confirmation" = "هل أنت متأكد من رغبتك في حذف جميع بياناتك؟ هذا الإجراء لا يمكن التراجع عنه.\n\nسيتم حذف جميع رحلاتك ومصاريفك ومعلوماتك الشخصية نهائياً من هذا الجهاز. ستعود إلى شاشة الترحيب.";
+"delete_account_confirmation" = "هل أنت متأكد من رغبتك في حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه.\n\nسيتم حذف حسابك نهائياً، لكنك ستبقى كمشارك في أي مجموعات انضممت إليها. سيظل بإمكان أعضاء المجموعة الآخرين رؤية مصاريفك وأرصدتك.";
+
+// MARK: - Trip Joining
+"enter_invite_code" = "أدخل رمز الدعوة للانضمام إلى الرحلة.";
+"invite_code" = "رمز الدعوة";
+"join_trip" = "انضم إلى الرحلة";
+
+// MARK: - Trip List and Management
+"groups" = "المجموعات";
+"your_groups" = "مجموعاتك";
+"no_groups_yet" = "لا توجد مجموعات بعد";
+"create_group_description" = "أنشئ مجموعة جديدة لبدء تتبع المصاريف مع الأصدقاء";
+"create_new_group" = "إنشاء مجموعة جديدة";
+"join_group" = "انضم إلى مجموعة";
+"edit_profile" = "تعديل الملف الشخصي";
+"add_options" = "خيارات الإضافة";
+"participants" = "المشاركون";
+"owed" = "مدين لك";
+"owe" = "مدين";
+"settled" = "مسوى";
+"you_are_owed" = "مدين لك";
+"you_owe" = "أنت مدين";
+"you_are_settled_up" = "أنت مسوى الحساب";
+"no_expenses" = "لا توجد مصاريف";
+
+// MARK: - Trip Actions
+"leave" = "مغادرة";
+"share_group" = "مشاركة المجموعة";
+"leave_group" = "مغادرة المجموعة";
+"cannot_leave_group" = "لا يمكن مغادرة المجموعة";
+"leave_group_confirmation" = "ستتم إزالتك من هذه المجموعة لكن المشاركين الآخرين سيحتفظون بالوصول.";
+"leave_group_last_participant" = "أنت آخر مشارك في هذه المجموعة. ستحذف المجموعة نهائياً ولا يمكن استردادها.";
+"outstanding_balance_message" = "لديك رصيد متبقي قدره %@. يجب تسوية جميع الديون قبل مغادرة المجموعة.";
+"settle_debts_message" = "يجب تسوية جميع الديون قبل مغادرة المجموعة.";
+
+// MARK: - New Group Creation
+"new_group" = "مجموعة جديدة";
+"group_details" = "تفاصيل المجموعة";
+"group_name" = "اسم المجموعة";
+"description_optional" = "الوصف (اختياري)";
+"add_participants" = "إضافة مشاركين";
+"hide_participants" = "إخفاء المشاركين";
+"previous_participants" = "المشاركون السابقون";
+"add_more" = "إضافة المزيد";
+"create" = "إنشاء";
+"group_creation_description_with_participants" = "أضف المشاركين الآن أو يمكنك إضافتهم لاحقاً بعد إنشاء المجموعة.";
+"group_creation_description_without_participants" = "أدخل تفاصيل مجموعتك الجديدة. يمكنك إضافة المشاركين والمصاريف بعد إنشاء المجموعة.";
+
+// MARK: - Join Group
+"join_group_title" = "انضم إلى مجموعة";
+"enter_invite_code_header" = "أدخل رمز الدعوة";
+"join_group_description" = "أدخل الرمز الذي تمت مشاركته معك للانضمام إلى مجموعة موجودة. يوجد هذا الرمز في قائمة مشاركة المجموعة.";
+"group_invite_code" = "رمز دعوة المجموعة";
+"join" = "انضم";
+
+// MARK: - Network Status
+"offline_mode" = "وضع عدم الاتصال - ستتم مزامنة التغييرات عند استعادة الاتصال";
+
+// MARK: - Accessibility
+"selected" = "محدد";
+"double_tap_to_remove" = "انقر مرتين للإزالة";
+"double_tap_to_add" = "انقر مرتين للإضافة";
+"create_new_group_hint" = "ينشئ مجموعة جديدة لتتبع المصاريف";
+"no_trips" = "لا توجد رحلات";
+
+// MARK: - Navigation
+"trip_not_found" = "الرحلة غير موجودة";
+
+// MARK: - Trip Detail Tabs
+"expenses" = "المصاريف";
+"balances" = "الأرصدة";
+"participants" = "المشاركون";
+
+// MARK: - Trip Actions Menu
+"add_expense" = "إضافة مصروف";
+"add_participant" = "إضافة مشارك";
+"change_currency" = "تغيير العملة";
+
+// MARK: - Leave Group
+"leave_group_last_participant" = "أنت آخر مشارك في هذه المجموعة. ستحذف المجموعة نهائياً ولا يمكن استردادها.";
+"leave_group_confirmation" = "ستتم إزالتك من هذه المجموعة لكن المشاركين الآخرين سيحتفظون بالوصول.";
+"cannot_leave_group" = "لا يمكن مغادرة المجموعة";
+"outstanding_balance_message" = "لديك رصيد متبقي بقيمة %@. يجب تسوية جميع الديون قبل مغادرة المجموعة.";
+
+// MARK: - Expense Management
+"no_expenses_yet" = "لا توجد مصاريف بعد";
+"add_first_expense" = "أضف أول مصروف لك لبدء التتبع";
+"add_your_first_expense" = "أضف أول مصروف لك";
+"creates_new_expense" = "ينشئ مصروف جديد لهذه الرحلة";
+"paid_by" = "دفعه";
+"edit_expense" = "تعديل المصروف";
+"delete_expense" = "حذف المصروف";
+"are_you_sure_delete_expense" = "هل أنت متأكد من حذف هذا المصروف؟";
+"double_tap_edit_expense" = "انقر مرتين لتعديل المصروف";
+"expense" = "المصروف";
+"no_expenses" = "لا توجد مصاريف";
+
+// MARK: - Expense Sheets
+"add_expense_title" = "إضافة مصروف";
+"edit_expense_title" = "تعديل المصروف";
+"expense_info" = "معلومات المصروف";
+"description" = "الوصف";
+"amount" = "المبلغ";
+"select_currency" = "اختر العملة";
+"expense_description" = "وصف المصروف";
+"expense_amount" = "مبلغ المصروف";
+"select_who_paid" = "اختر من دفع هذا المصروف";
+"on" = "في";
+"select_expense_date" = "اختر تاريخ المصروف";
+"split_between" = "قسم بين";
+"expense_date" = "تاريخ المصروف";
+"select_date" = "اختر التاريخ";
+"done" = "تم";
+
+// MARK: - Balance Management
+"all_settled_up" = "كل شيء مسوى!";
+"everyone_paid_fair_share" = "دفع الجميع نصيبهم العادل";
+"record_a_payment" = "تسجيل دفعة";
+"no_expenses_to_calculate" = "لا توجد مصاريف للحساب";
+"add_expenses_to_see_debts" = "أضف مصاريف لترى من يدين لمن";
+"your_balance" = "رصيدك";
+"who_owes_what" = "من يدين بماذا";
+"summary" = "الملخص";
+"all_amounts_shown_in" = "جميع المبالغ معروضة بـ %@";
+"you" = "أنت";
+"will_receive" = "سيستلم";
+"owes_others" = "يدين للآخرين";
+"is_settled_up" = "مسوى الحساب";
+"owes" = "يدين";
+"all_settled_up_lowercase" = "كل شيء مسوى";
+"total_trip_cost" = "إجمالي تكلفة الرحلة";
+"average_per_person" = "المتوسط لكل شخص";
+"tap_to_see_breakdown" = "انقر لرؤية تفصيل الرصيد";
+"tap_to_see_debt_breakdown" = "انقر لرؤية التفصيل";
+
+// MARK: - Participant Management
+"people_in_this_group" = "الأشخاص في هذه المجموعة";
+"edit_name" = "تعديل الاسم";
+"remove_participant" = "إزالة المشارك";
+"share_invite_link" = "مشاركة رابط الدعوة";
+"long_press_for_options" = "اضغط مطولاً للخيارات";
+"invite_people_to_claim" = "دعوة الأشخاص لاستلام العناصر النائبة";
+"share_group_to_claim" = "شارك المجموعة للسماح للآخرين باستلام المشاركين النائبين";
+"unclaimed_participants_message" = "لديك %@ %@ نائب غير مستلم. شارك رابط المجموعة حتى يتمكن الآخرون من الانضمام واستلام هؤلاء المشاركين.";
+"participant" = "مشارك";
+"participants" = "مشاركين";
+"add_participant_tip" = "نصيحة: يمكنك إضافة مشاركين نائبين يمكن للآخرين استلامهم عند انضمامهم.";
+"add_new_participant_hint" = "إضافة مشارك جديد لهذه المجموعة";
+"cannot_remove_participant" = "لا يمكن إزالة المشارك";
+"participant_has_balance" = "%@ لديه رصيد متبقي. لا يمكن إزالة المشاركين الذين لديهم أرصدة حتى يصبح رصيدهم صفراً.";
+"participants_with_balances_cannot_remove" = "لا يمكن إزالة المشاركين الذين لديهم أرصدة متبقية.";
+"are_you_sure_remove_participant" = "هل أنت متأكد من إزالة %@ من هذه المجموعة؟";
+"are_you_sure_remove_this_participant" = "هل أنت متأكد من إزالة هذا المشارك؟";
+"remove" = "إزالة";
+"your_name" = "اسمك";
+"enter_your_name" = "أدخل اسمك";
+"edit_name_title" = "تعديل الاسم";
+"update_name_in_group_only" = "سيؤدي هذا إلى تحديث اسمك في هذه المجموعة فقط.";
+"placeholder_participant" = "مشارك نائب";
+"placeholder" = "نائب";
+"save" = "حفظ";
+
+// MARK: - Add Participant Sheet
+"previous_participants" = "المشاركون السابقون";
+"add_participants" = "إضافة مشاركين";
+"name" = "الاسم";
+"add_more" = "إضافة المزيد";
+"add_participants_title" = "إضافة مشاركين";
+"selected" = "محدد";
+"double_tap_to_remove" = "انقر مرتين للإزالة";
+"double_tap_to_add" = "انقر مرتين للإضافة";
+
+// MARK: - Record Payment Sheet
+"payment_details" = "تفاصيل الدفعة";
+"payment_amount" = "مبلغ الدفعة";
+"from" = "من";
+"to" = "إلى";
+"select_recipient" = "اختر المستلم";
+"note_optional" = "ملاحظة (اختيارية)";
+"payment_note" = "ملاحظة الدفعة";
+"record_payment_info" = "تسجيل الدفعة يساعد في تتبع من سوى ديونه. هذا ينشئ مصروف خاص يظهر أن الدين تم دفعه.";
+"record_payment" = "تسجيل الدفعة";
+"settle_all_my_balances" = "تسوية جميع أرصدتي";
+"record_payment_title" = "تسجيل الدفعة";
+"select_currency_title" = "اختر العملة";
+"recording_payments" = "جاري تسجيل الدفعات...";
+"payment_from_to" = "دفعة من %@ إلى %@"; 

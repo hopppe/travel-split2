@@ -1,6 +1,6 @@
 //
 //  TripViewModel.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -565,6 +565,17 @@ class TripViewModel: ObservableObject {
         return balanceCalculator.getUserBalanceString(trip)
     }
     
+    // Check if the current user is the last participant in the trip
+    func isLastParticipantInTrip(_ trip: Trip) -> Bool {
+        // Count the number of participants that would remain after the current user leaves
+        let remainingParticipants = trip.participants.filter { participant in
+            // Exclude the current user (both direct ID match and claimed participant match)
+            !(participant.id == currentUser.id || participant.claimedByUserId == currentUser.id)
+        }
+        
+        return remainingParticipants.isEmpty
+    }
+    
     func updateBaseCurrency(to currencyCode: String) {
         balanceCalculator.updateBaseCurrency(to: currencyCode)
     }
@@ -611,7 +622,7 @@ class TripViewModel: ObservableObject {
         showParticipantClaimingView = false
         
         // Create a minimal placeholder user
-        currentUser = User(id: UUID().uuidString, name: "You", email: "", profileImage: nil, isClaimed: true)
+        currentUser = User(id: UUID().uuidString, name: "user", email: "", profileImage: nil, isClaimed: true)
         
         // Force show welcome screen by setting hasCompletedSetup to false
         UserDefaults.standard.set(false, forKey: "hasCompletedSetup")

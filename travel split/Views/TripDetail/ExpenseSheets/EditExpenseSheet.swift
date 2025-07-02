@@ -1,6 +1,6 @@
 //
 //  EditExpenseSheet.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -29,8 +29,11 @@ struct EditExpenseSheet: View {
     @State private var expenseDate: Date
     @State private var showDatePicker = false
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     // Currency options
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R"]
+    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼", "JD", "د.إ"]
     
     // Initialize with expense data
     init(viewModel: TripViewModel, expense: Expense) {
@@ -47,10 +50,11 @@ struct EditExpenseSheet: View {
     var body: some View {
         Form {
             // MARK: - Expense Details Section
-            Section(header: Text("Expense Info")) {
+            Section(header: Text("expense_info".localized)) {
                 // Description field
-                TextField("Description", text: $expenseName)
-                    .accessibilityLabel("Expense description")
+                TextField("description".localized, text: $expenseName)
+                    .safeRTLTextField()
+                    .accessibilityLabel("expense_description".localized)
                 
                 // Amount with currency selector
                 HStack {
@@ -62,12 +66,14 @@ struct EditExpenseSheet: View {
                             .background(Color(UIColor.systemGray5))
                             .cornerRadius(8)
                     }
-                    .accessibilityLabel("Select currency")
+                    .accessibilityLabel("select_currency".localized)
                     
-                    TextField("Amount", text: $expenseAmount)
+                    TextField("amount".localized, text: $expenseAmount)
                         .keyboardType(.decimalPad)
-                        .accessibilityLabel("Expense amount")
+                        .safeRTLTextField()
+                        .accessibilityLabel("expense_amount".localized)
                 }
+                .rtlHStack()
             }
             
             // MARK: - Payer Section
@@ -75,9 +81,10 @@ struct EditExpenseSheet: View {
                 Section {
                     // Paid By row
                     HStack {
-                        Text("Paid By")
+                        Text("paid_by".localized)
                             .font(.body)
                             .foregroundColor(.primary)
+                            .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                         
                         Spacer()
                         
@@ -88,31 +95,32 @@ struct EditExpenseSheet: View {
                         }
                         .pickerStyle(.menu)
                         .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                    .rtlHStack()
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Select who paid for this expense")
+                    .accessibilityLabel("select_who_paid".localized)
                     
                     // Date row
                     HStack {
-                        Text("On")
+                        Text("on".localized)
                             .font(.body)
                             .foregroundColor(.primary)
+                            .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                         
                         Spacer()
                         
                         Button(action: { showDatePicker = true }) {
-                            Text(expenseDate, style: .date)
+                            Text(formattedDate)
                                 .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
+                    .rtlHStack()
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Select expense date")
+                    .accessibilityLabel("select_expense_date".localized)
                 }
                 
                 // MARK: - Participants Section
-                Section(header: Text("Split Between")) {
+                Section(header: Text("split_between".localized)) {
                     ForEach(trip.participants) { user in
                         ParticipantRow(
                             user: user,
@@ -154,14 +162,15 @@ struct EditExpenseSheet: View {
                 }
             }
         }
-        .navigationTitle("Edit Expense")
+        .forceRTL()
+        .navigationTitle("edit_expense_title".localized)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(
-            leading: Button("Cancel") {
+            leading: Button("cancel".localized) {
                 dismiss()
             },
-            trailing: Button("Save") {
+            trailing: Button("save".localized) {
                 saveExpense()
             }
             .disabled(!isFormValid())
@@ -171,7 +180,7 @@ struct EditExpenseSheet: View {
                 viewModel.deleteExpense(withId: expense.id)
                 dismiss()
             } label: {
-                Label("Delete Expense", systemImage: "trash")
+                Label("delete_expense".localized, systemImage: "trash")
                     .foregroundColor(.red)
                     .frame(maxWidth: .infinity)
             }
@@ -184,21 +193,24 @@ struct EditExpenseSheet: View {
                 isPresented: $showCurrencyPicker,
                 options: currencyOptions
             )
+            .environmentObject(languageManager)
         }
         .sheet(isPresented: $showDatePicker) {
             NavigationStack {
-                DatePicker("Expense Date", selection: $expenseDate, displayedComponents: .date)
+                DatePicker("expense_date".localized, selection: $expenseDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
+                    .environment(\.locale, languageManager.currentLocale)
                     .padding()
-                    .navigationTitle("Select Date")
+                    .navigationTitle("select_date".localized)
                     .navigationBarTitleDisplayMode(.inline)
                     .navigationBarItems(
-                        trailing: Button("Done") {
+                        trailing: Button("done".localized) {
                             showDatePicker = false
                         }
                     )
             }
             .presentationDetents([.medium])
+            .forceRTL()
         }
         .onAppear {
             // Load expense data when view appears
@@ -216,6 +228,14 @@ struct EditExpenseSheet: View {
                 updateSplitAmounts()
             }
         }
+    }
+    
+    // Helper computed property for formatted date
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = languageManager.currentLocale
+        formatter.dateStyle = .medium
+        return formatter.string(from: expenseDate)
     }
     
     // MARK: - Helper Methods
@@ -395,7 +415,10 @@ struct EditExpenseSheet: View {
             "₺": "TRY",
             "₴": "UAH",
             "₦": "NGN",
-            "R": "ZAR"
+            "R": "ZAR",
+            "﷼": "SAR",
+            "JD": "JOD",
+            "د.إ": "AED"
         ]
         
         return currencyCodes[symbol] ?? "USD"

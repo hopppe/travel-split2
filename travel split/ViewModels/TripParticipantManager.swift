@@ -1,6 +1,6 @@
 //
 //  TripParticipantManager.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 4/9/25.
 //
@@ -210,7 +210,7 @@ class TripParticipantManager {
         }
         
         // Determine the best name to use for the claimed participant
-        // Priority: 1. Firebase display name, 2. Saved user name (if not "You"), 3. Keep original placeholder name
+        // Priority: 1. Firebase display name, 2. Saved user name (if not "user"), 3. Keep original placeholder name
         let bestName: String
         let currentUser = tripViewModel.currentUser
         
@@ -218,12 +218,12 @@ class TripParticipantManager {
         if let firebaseUser = Auth.auth().currentUser,
            let displayName = firebaseUser.displayName,
            !displayName.isEmpty,
-           displayName != "You" {
+           displayName != "user" {
             bestName = displayName
             print("Using Firebase display name: \(displayName)")
         }
-        // Check if current user has a proper name (not "You")
-        else if !currentUser.name.isEmpty && currentUser.name != "You" {
+        // Check if current user has a proper name (not "user")
+        else if !currentUser.name.isEmpty && currentUser.name != "user" {
             bestName = currentUser.name
             print("Using current user name: \(currentUser.name)")
         }

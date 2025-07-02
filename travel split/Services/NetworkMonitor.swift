@@ -1,6 +1,6 @@
 //
 //  NetworkMonitor.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created for offline functionality
 //

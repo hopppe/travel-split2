@@ -1,6 +1,6 @@
 //
 //  ExpenseComponents.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -24,6 +24,9 @@ struct ParticipantRow: View {
     @State private var editableAmount: String = ""
     @State private var isFocused: Bool = false
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         HStack {
             // Checkbox and name
@@ -34,6 +37,7 @@ struct ParticipantRow: View {
                     
                     Text(user.name)
                         .foregroundColor(.primary)
+                        .rtlAwareAlignment()
                 }
             }
             .buttonStyle(PlainButtonStyle())
@@ -42,62 +46,53 @@ struct ParticipantRow: View {
             
             // Only show amount field if participant is selected
             if isSelected {
-                HStack {
+                HStack(spacing: 4) {
                     Text(currencySymbol)
                         .foregroundColor(.secondary)
+                        .font(.subheadline)
                     
-                    // Enhanced TextField with clear visual styling to make it obvious users can edit amounts manually
-                    // The background and border clearly indicate this is an editable text field
-                    TextField("0", text: Binding(
-                        get: { 
-                            if isFocused {
-                                // When focused, show empty field for easy entry
-                                return ""
-                            } else {
-                                return amount == 0 ? "0" : String(format: "%.\(decimalPlaces)f", amount)
-                            }
-                        },
-                        set: { newValue in
-                            if let value = Double(newValue.replacingOccurrences(of: ",", with: ".")) {
-                                onAmountChanged(value)
-                            } else if newValue.isEmpty {
-                                onAmountChanged(0)
+                    TextField("0.00", text: $editableAmount)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
+                        .frame(width: 80)
+                        .onReceive(editableAmount.publisher.collect()) { _ in
+                            // Convert text to double and notify parent
+                            let doubleValue = Double(editableAmount.replacingOccurrences(of: ",", with: "."))
+                            onAmountChanged(doubleValue)
+                        }
+                        .onTapGesture {
+                            isFocused = true
+                            if shouldClearOnEdit && !editableAmount.isEmpty {
+                                editableAmount = ""
                             }
                         }
-                    ))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 70)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(UIColor.systemGray6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(isFocused ? Color.accentColor : Color(UIColor.systemGray4), lineWidth: 1)
-                            )
-                    )
-                    .onTapGesture {
-                        // Set focus state and clear the field
-                        isFocused = true
-                        
-                        // Reset amount to zero when tapped
-                        if shouldClearOnEdit {
-                            onAmountChanged(0)
-                        }
-                    }
-                    .onSubmit {
-                        isFocused = false
-                    }
                 }
             }
         }
-        .contentShape(Rectangle())
-        .accessibilityLabel("\(user.name) - \(isSelected ? "selected" : "not selected")")
-        .accessibilityHint("Double tap to \(isSelected ? "remove from" : "add to") expense")
         .onAppear {
-            isFocused = false
+            // Initialize the text field with the current amount
+            updateEditableAmount()
+        }
+        .onChange(of: amount) { _ in
+            // Update text field when amount changes externally (unless user is editing)
+            if !isFocused {
+                updateEditableAmount()
+            }
+        }
+        .onChange(of: isFocused) { focused in
+            if !focused {
+                // When focus is lost, ensure the display is up to date
+                updateEditableAmount()
+            }
+        }
+    }
+    
+    /// Update the editable amount text field
+    private func updateEditableAmount() {
+        if amount > 0 {
+            editableAmount = String(format: "%.\(decimalPlaces)f", amount)
+        } else {
+            editableAmount = ""
         }
     }
 }

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		D0CD9DC62D7ABCA400FD3A32 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = D0CD9DC52D7ABCA400FD3A32 /* FirebaseAuth */; };
 		D0CD9DC82D7ABCA400FD3A32 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CD9DC72D7ABCA400FD3A32 /* FirebaseCore */; };
-		D0CD9DCA2D7ABCA400FD3A32 /* FirebaseDynamicLinks in Frameworks */ = {isa = PBXBuildFile; productRef = D0CD9DC92D7ABCA400FD3A32 /* FirebaseDynamicLinks */; };
 		D0CD9DCC2D7ABCA400FD3A32 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CD9DCB2D7ABCA400FD3A32 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
@@ -19,21 +18,22 @@
 			containerPortal = D0D743192D791A0900887648 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D0D743202D791A0A00887648;
-			remoteInfo = "EquiSplit";
+			remoteInfo = EquiSplit;
 		};
 		D0D7433C2D791A0E00887648 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D0D743192D791A0900887648 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D0D743202D791A0A00887648;
-			remoteInfo = "EquiSplit";
+			remoteInfo = EquiSplit;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D0D743212D791A0A00887648 /* EquiSplit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "EquiSplit.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0D743312D791A0E00887648 /* EquiSplitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "EquiSplitTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0D7433B2D791A0E00887648 /* EquiSplitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "EquiSplitUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0B4FCC72E0EA710007E7504 /* EquiSplit.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EquiSplit.entitlements; sourceTree = "<group>"; };
+		D0D743212D791A0A00887648 /* EquiSplit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EquiSplit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D743312D791A0E00887648 /* EquiSplitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EquiSplitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D7433B2D791A0E00887648 /* EquiSplitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EquiSplitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -62,7 +62,6 @@
 				D0CD9DC82D7ABCA400FD3A32 /* FirebaseCore in Frameworks */,
 				D0CD9DCC2D7ABCA400FD3A32 /* FirebaseFirestore in Frameworks */,
 				D0CD9DC62D7ABCA400FD3A32 /* FirebaseAuth in Frameworks */,
-				D0CD9DCA2D7ABCA400FD3A32 /* FirebaseDynamicLinks in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,6 +85,7 @@
 		D0D743182D791A0900887648 = {
 			isa = PBXGroup;
 			children = (
+				D0B4FCC72E0EA710007E7504 /* EquiSplit.entitlements */,
 				D0D743232D791A0A00887648 /* travel split */,
 				D0D743342D791A0E00887648 /* travel splitTests */,
 				D0D7433E2D791A0E00887648 /* travel splitUITests */,
@@ -121,14 +121,13 @@
 			fileSystemSynchronizedGroups = (
 				D0D743232D791A0A00887648 /* travel split */,
 			);
-			name = "EquiSplit";
+			name = EquiSplit;
 			packageProductDependencies = (
 				D0CD9DC52D7ABCA400FD3A32 /* FirebaseAuth */,
 				D0CD9DC72D7ABCA400FD3A32 /* FirebaseCore */,
-				D0CD9DC92D7ABCA400FD3A32 /* FirebaseDynamicLinks */,
 				D0CD9DCB2D7ABCA400FD3A32 /* FirebaseFirestore */,
 			);
-			productName = "EquiSplit";
+			productName = EquiSplit;
 			productReference = D0D743212D791A0A00887648 /* EquiSplit.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -148,10 +147,10 @@
 			fileSystemSynchronizedGroups = (
 				D0D743342D791A0E00887648 /* travel splitTests */,
 			);
-			name = "EquiSplitTests";
+			name = EquiSplitTests;
 			packageProductDependencies = (
 			);
-			productName = "EquiSplitTests";
+			productName = EquiSplitTests;
 			productReference = D0D743312D791A0E00887648 /* EquiSplitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -171,10 +170,10 @@
 			fileSystemSynchronizedGroups = (
 				D0D7433E2D791A0E00887648 /* travel splitUITests */,
 			);
-			name = "EquiSplitUITests";
+			name = EquiSplitUITests;
 			packageProductDependencies = (
 			);
-			productName = "EquiSplitUITests";
+			productName = EquiSplitUITests;
 			productReference = D0D7433B2D791A0E00887648 /* EquiSplitUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -207,6 +206,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ar,
 			);
 			mainGroup = D0D743182D791A0900887648;
 			minimizedProjectReferenceProxies = 1;
@@ -411,14 +411,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EquiSplit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"travel split/Preview Content\"";
 				DEVELOPMENT_TEAM = AJ4TDM8U35;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "split-pro-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "EquiSplit";
+				INFOPLIST_KEY_CFBundleDisplayName = EquiSplit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 Ethan Hoppe. All rights reserved.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -430,7 +431,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ingenuitylabsllc.freesplitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -446,14 +447,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EquiSplit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"travel split/Preview Content\"";
 				DEVELOPMENT_TEAM = AJ4TDM8U35;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "split-pro-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "EquiSplit";
+				INFOPLIST_KEY_CFBundleDisplayName = EquiSplit;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 Ethan Hoppe. All rights reserved.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -465,7 +467,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ingenuitylabsllc.freesplitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -610,11 +612,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D0CD9DC42D7ABCA400FD3A32 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
-		};
-		D0CD9DC92D7ABCA400FD3A32 /* FirebaseDynamicLinks */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D0CD9DC42D7ABCA400FD3A32 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseDynamicLinks;
 		};
 		D0CD9DCB2D7ABCA400FD3A32 /* FirebaseFirestore */ = {
 			isa = XCSwiftPackageProductDependency;

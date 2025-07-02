@@ -1,6 +1,6 @@
 //
 //  travel_splitUITests.swift
-//  Split ProUITests
+//  EquiSplitUITests
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //

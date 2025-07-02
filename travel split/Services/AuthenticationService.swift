@@ -35,12 +35,12 @@ class AuthenticationService: ObservableObject {
                 // Get the display name, with proper fallback logic:
                 // 1. Use Firebase display name if available
                 // 2. Use previously saved name if available
-                // 3. Only use "You" as absolute last resort for truly new users
+                // 3. Only use "user" as absolute last resort for truly new users
                 let displayName: String
                 if let firebaseName = user.displayName, !firebaseName.isEmpty {
                     displayName = firebaseName
-                } else if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
-                    // Use the saved name if it's not empty and not default "You"
+                } else if let savedName = savedName, !savedName.isEmpty, savedName != "user" {
+                    // Use the saved name if it's not empty and not default "user"
                     displayName = savedName
                     
                     // Also update Firebase with this name to keep them in sync
@@ -54,7 +54,7 @@ class AuthenticationService: ObservableObject {
                         }
                     }
                 } else {
-                    displayName = "You"
+                    displayName = "user"
                 }
                 
                 // Create our internal user model
@@ -261,7 +261,7 @@ class AuthenticationService: ObservableObject {
             } else {
                 // Check if we have a previously saved name for this user
                 let savedName = UserDefaults.standard.string(forKey: "user_name")
-                if let savedName = savedName, !savedName.isEmpty, savedName != "You" {
+                if let savedName = savedName, !savedName.isEmpty, savedName != "user" {
                     displayName = savedName
                     
                     // Also update Firebase with this name
@@ -274,7 +274,7 @@ class AuthenticationService: ObservableObject {
                     }
                 } else {
                     // Only use a generic name as last resort
-                    displayName = "User"
+                    displayName = "user"
                 }
             }
             

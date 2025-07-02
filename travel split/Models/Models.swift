@@ -1,6 +1,6 @@
 //
 //  Models.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -200,7 +200,9 @@ struct Expense: Identifiable, Codable {
             "UAH": "₴",
             "NGN": "₦",
             "ZAR": "R",
-            "SAR": "﷼"
+            "SAR": "﷼",
+            "JOD": "JD",
+            "AED": "د.إ"
         ]
         return symbols[currencyCode ?? "USD"] ?? "$"
     }

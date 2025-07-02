@@ -1,6 +1,6 @@
 //
 //  TabControlView.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -13,15 +13,15 @@ struct TabControlView: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            TabButton(title: "Expenses", isSelected: selectedTab == 0) {
+            TabButton(title: "expenses".localized, isSelected: selectedTab == 0) {
                 selectedTab = 0
             }
             
-            TabButton(title: "Balances", isSelected: selectedTab == 1) {
+            TabButton(title: "balances".localized, isSelected: selectedTab == 1) {
                 selectedTab = 1
             }
             
-            TabButton(title: "Participants", isSelected: selectedTab == 2) {
+            TabButton(title: "participants".localized, isSelected: selectedTab == 2) {
                 selectedTab = 2
             }
         }
@@ -64,36 +64,41 @@ struct TripActionsMenu: View {
     let onChangeCurrency: () -> Void
     let onDeleteTrip: () -> Void
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         Menu {
             // Add expense action
             Button(action: onAddExpense) {
-                Label("Add Expense", systemImage: "dollarsign.circle")
+                Label("add_expense".localized, systemImage: "dollarsign.circle")
             }
             
             // Add participant action
             Button(action: onAddParticipant) {
-                Label("Add Participant", systemImage: "person.badge.plus")
+                Label("add_participant".localized, systemImage: "person.badge.plus")
             }
             
             // Share trip action
             Button(action: onShareTrip) {
-                Label("Share Group", systemImage: "square.and.arrow.up")
+                Label("share_group".localized, systemImage: "square.and.arrow.up")
             }
             
             // Change currency action
             Button(action: onChangeCurrency) {
-                Label("Change Currency", systemImage: "dollarsign.circle.fill")
+                Label("change_currency".localized, systemImage: "dollarsign.circle.fill")
             }
             
             Divider()
             
             // Delete trip action
             Button(role: .destructive, action: onDeleteTrip) {
-                Label("Leave Group", systemImage: "door.right.hand.open")
+                Label("leave_group".localized, systemImage: "door.right.hand.open")
             }
         } label: {
             Image(systemName: "ellipsis.circle")
         }
+        .menuOrder(languageManager.isRTL ? .fixed : .automatic)
+        .environment(\.layoutDirection, languageManager.layoutDirection)
     }
 } 

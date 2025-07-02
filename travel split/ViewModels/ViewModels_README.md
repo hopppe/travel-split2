@@ -1,6 +1,6 @@
 # ViewModels Organization
 
-This directory contains the ViewModels for the Split Pro app, split into smaller, more focused files for better maintainability.
+This directory contains the ViewModels for the EquiSplit app, split into smaller, more focused files for better maintainability.
 
 ## Core Files
 

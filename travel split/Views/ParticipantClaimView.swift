@@ -1,6 +1,6 @@
 //
 //  ParticipantClaimView.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -14,122 +14,92 @@ struct ParticipantClaimView: View {
     @ObservedObject var viewModel: TripViewModel
     let potentialMatches: [User]
     let trip: Trip
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                // Header content
-                Text("We found existing participants that might be you")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .padding(.top)
-                    .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 24) {
+                // Header section
+                VStack(spacing: 16) {
+                    Text("found_existing_participants".localized)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("claim_participant_description".localized)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding(.top)
                 
-                // Description text - breaking up complex expressions
-                Text("A participant with similar name or email was found in this trip. Do you want to claim this participant as your account?")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                // Participants list
+                if !potentialMatches.isEmpty {
+                    VStack(spacing: 16) {
+                        VStack(alignment: languageAwareHorizontalAlignment, spacing: 12) {
+                            Text("select_participant_to_claim".localized)
+                                .font(.headline)
+                                .padding(.horizontal)
+                                .rtlAwareAlignment()
+                            
+                            LazyVStack(spacing: 8) {
+                                ForEach(potentialMatches, id: \.id) { participant in
+                                    Button {
+                                        claimParticipant(participant)
+                                    } label: {
+                                        ParticipantMatchRow(participant: participant)
+                                            .padding(.horizontal)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        
+                        // Join as new participant button
+                        VStack(spacing: 12) {
+                            Button("join_as_new_participant".localized) {
+                                joinAsNewParticipant()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
+                            
+                            Text("claim_participant_footer".localized)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding(.top)
+                    }
+                }
                 
-                // Match list and options
-                matchesList
+                Spacer()
             }
-            .navigationTitle("Join Trip")
+            .navigationTitle("join_group_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        cancelJoining()
+                    Button("cancel".localized) {
+                        dismiss()
                     }
                 }
             }
         }
     }
     
-    // Extract the list into a separate view property
-    private var matchesList: some View {
-        List {
-            // Potential matches section
-            Section(header: Text("Select a participant to claim")) {
-                ForEach(potentialMatches) { participant in
-                    Button(action: {
-                        // Updated to match the new function signature
-                        viewModel.claimParticipant(participant)
-                        completeJoining()
-                    }) {
-                        ParticipantMatchRow(participant: participant)
-                    }
-                    .accessibilityHint("Claim this participant as your account")
-                }
-            }
-            
-            // Join as new section
-            Section {
-                Button(action: {
-                    viewModel.addCurrentUserToTrip(trip)
-                    completeJoining()
-                }) {
-                    HStack {
-                        Text("Join as a new participant")
-                            .fontWeight(.medium)
-                        
-                        Spacer()
-                        
-                        Image(systemName: "person.badge.plus")
-                    }
-                    .foregroundColor(.blue)
-                }
-                .accessibilityHint("Join the trip as a new participant")
-            } footer: {
-                Text("If none of these participants are you, join as a new participant instead.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
+    // MARK: - Actions
+    
+    private func claimParticipant(_ participant: User) {
+        viewModel.claimParticipant(participant)
+        dismiss()
     }
     
-    // Handle completion of joining a trip - dismiss all sheets
-    private func completeJoining() {
-        // Make sure we have a current trip
-        guard let trip = viewModel.currentTrip else {
-            // If no trip, just dismiss
-            DispatchQueue.main.async {
-                self.viewModel.showParticipantClaimingView = false
-                self.viewModel.potentialClaimableParticipants = []
-                self.dismiss()
+    private func joinAsNewParticipant() {
+        viewModel.joinTrip(withInviteCode: trip.inviteCode) { success in
+            if success {
+                dismiss()
             }
-            return
-        }
-        
-        // Set the current trip
-        viewModel.selectTrip(trip)
-        
-        // Post a notification to tell the app to navigate to the trip detail view
-        NotificationCenter.default.post(
-            name: NSNotification.Name("NavigateToTripDetail"),
-            object: nil,
-            userInfo: ["tripId": trip.id]
-        )
-        
-        // Reset the view state and dismiss
-        DispatchQueue.main.async {
-            self.viewModel.showParticipantClaimingView = false
-            self.viewModel.potentialClaimableParticipants = []
-            self.dismiss()
-        }
-    }
-    
-    // Handle cancellation of joining a trip
-    private func cancelJoining() {
-        // Reset the view state using property wrapper syntax for published properties
-        DispatchQueue.main.async {
-            self.viewModel.showParticipantClaimingView = false
-            self.viewModel.potentialClaimableParticipants = []
-            
-            // Dismiss this view
-            self.dismiss()
         }
     }
 }
@@ -153,21 +123,23 @@ struct ParticipantMatchRow: View {
                 .accessibilityHidden(true)
             
             // Participant details
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 Text(participant.name)
                     .font(.headline)
+                    .rtlAwareAlignment()
                 
                 if !participant.email.isEmpty {
                     Text(participant.email)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
                 }
             }
             
             Spacer()
             
             // Claim button
-            Text("Claim")
+            Text("claim".localized)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.accentColor)
@@ -175,23 +147,29 @@ struct ParticipantMatchRow: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Claim \(participant.name)\(participant.email.isEmpty ? "" : ", email: \(participant.email)")")
+        .accessibilityLabel("claim".localized + " \(participant.name)\(participant.email.isEmpty ? "" : ", email: \(participant.email)")")
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    let viewModel = TripViewModel(currentUser: User.create(name: "Preview User", email: "preview@example.com"))
-    let trip = Trip.create(name: "Sample Trip", description: "Preview trip", creator: viewModel.currentUser)
-    let potentialMatches = [
-        User.createUnclaimed(name: "John", email: "john@example.com"),
-        User.createUnclaimed(name: "Preview User")
-    ]
-    
-    // Set up viewModel for previewing
-    viewModel.potentialClaimableParticipants = potentialMatches
-    viewModel.showParticipantClaimingView = true
-    
-    return ParticipantClaimView(viewModel: viewModel, potentialMatches: potentialMatches, trip: trip)
+    ParticipantClaimView(
+        viewModel: TripViewModel(currentUser: User(id: "preview-user", name: "Preview User", email: "preview@example.com")),
+        potentialMatches: [
+            User(id: "1", name: "John Doe", email: "john@example.com"),
+            User(id: "2", name: "Jane Smith", email: "jane@example.com")
+        ],
+        trip: Trip(
+            id: "trip1",
+            name: "Sample Trip",
+            description: "A sample trip for preview",
+            startDate: nil,
+            endDate: nil,
+            participants: [],
+            expenses: [],
+            inviteCode: "ABC123",
+            baseCurrencyCode: "USD"
+        )
+    )
 } 

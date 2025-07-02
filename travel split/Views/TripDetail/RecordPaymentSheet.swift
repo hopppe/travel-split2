@@ -1,6 +1,6 @@
 //
 //  RecordPaymentSheet.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -21,13 +21,16 @@ struct RecordPaymentSheet: View {
     @State private var note = ""
     @State private var isSettlingAllDebts = false
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     // Currency options - same as in other expense sheets
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼"]
+    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼", "JD", "د.إ"]
     
     var body: some View {
         Form {
             // Payment Details Section
-            Section(header: Text("Payment Details")) {
+            Section(header: Text("payment_details".localized)) {
                 // Amount field with currency selector
                 HStack {
                     Button(action: {
@@ -40,15 +43,16 @@ struct RecordPaymentSheet: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .accessibilityLabel("Select currency")
+                    .accessibilityLabel("select_currency".localized)
                     
-                    TextField("Amount", text: $paymentAmount)
+                    TextField("amount".localized, text: $paymentAmount)
                         .keyboardType(.decimalPad)
-                        .accessibilityLabel("Payment amount")
+                        .safeRTLTextField()
+                        .accessibilityLabel("payment_amount".localized)
                 }
                 
                 // Payer selector (who made the payment)
-                Picker("From", selection: $selectedPayer) {
+                Picker("from".localized, selection: $selectedPayer) {
                     if let currentUser = viewModel.findCurrentUserInTrip() {
                         Text(currentUser.name).tag(Optional(currentUser))
                     }
@@ -61,8 +65,8 @@ struct RecordPaymentSheet: View {
                 .pickerStyle(.menu)
                 
                 // Recipient selector (who received the payment)
-                Picker("To", selection: $selectedRecipient) {
-                    Text("Select recipient").tag(nil as User?)
+                Picker("to".localized, selection: $selectedRecipient) {
+                    Text("select_recipient".localized).tag(nil as User?)
                     ForEach(viewModel.currentTrip?.participants ?? []) { participant in
                         if participant.id != selectedPayer?.id {
                             Text(participant.name).tag(Optional(participant))
@@ -73,12 +77,13 @@ struct RecordPaymentSheet: View {
                 .disabled(selectedPayer == nil)
                 
                 // Optional note field
-                TextField("Note (optional)", text: $note)
-                    .accessibilityLabel("Payment note")
+                TextField("note_optional".localized, text: $note)
+                    .safeRTLTextField()
+                    .accessibilityLabel("payment_note".localized)
             }
             
             // Info section
-            Section(footer: Text("Recording a payment helps keep track of who has settled their debts. This creates a special expense that shows the debt has been paid.")) {
+            Section(footer: Text("record_payment_info".localized).rtlAwareAlignment()) {
                 EmptyView()
             }
             
@@ -87,7 +92,7 @@ struct RecordPaymentSheet: View {
                 VStack(spacing: 12) {
                     // Record Payment button
                     Button(action: recordPayment) {
-                        Text("Record Payment")
+                        Text("record_payment".localized)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.accentColor)
@@ -98,7 +103,7 @@ struct RecordPaymentSheet: View {
                     
                     // Settle All Balances button
                     Button(action: settleAllBalances) {
-                        Text("Settle All My Balances")
+                        Text("settle_all_my_balances".localized)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.accentColor)
@@ -111,18 +116,18 @@ struct RecordPaymentSheet: View {
             }
             .listRowInsets(EdgeInsets())
         }
-        .navigationTitle("Record Payment")
+        .navigationTitle("record_payment_title".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("cancel".localized) {
                     dismiss()
                 }
             }
         }
         .sheet(isPresented: $showCurrencyPicker) {
             VStack {
-                Text("Select Currency")
+                Text("select_currency_title".localized)
                     .font(.headline)
                     .padding()
                 
@@ -144,7 +149,7 @@ struct RecordPaymentSheet: View {
                     .foregroundColor(.primary)
                 }
                 
-                Button("Cancel") {
+                Button("cancel".localized) {
                     self.showCurrencyPicker = false
                 }
                 .padding()
@@ -157,7 +162,7 @@ struct RecordPaymentSheet: View {
         .overlay(
             Group {
                 if isSettlingAllDebts {
-                    ProgressView("Recording payments...")
+                    ProgressView("recording_payments".localized)
                         .padding()
                         .background(Color(.systemBackground).opacity(0.8))
                         .cornerRadius(10)
@@ -218,7 +223,9 @@ struct RecordPaymentSheet: View {
             "₴": "UAH",
             "₦": "NGN",
             "R": "ZAR",
-            "﷼": "SAR"
+            "﷼": "SAR",
+            "JD": "JOD",
+            "د.إ": "AED"
         ]
         
         return symbolToCode[currencySymbol] ?? "USD"
@@ -232,9 +239,9 @@ struct RecordPaymentSheet: View {
             return
         }
         
-        // Create a payment title
+        // Create a payment title using localized string
         let paymentTitle = note.isEmpty ? 
-            "Payment from \(payer.name) to \(recipient.name)" : 
+            String(format: "payment_from_to".localized, payer.name, recipient.name) : 
             note
         
         // Create a payment expense (special expense that only involves two people)
@@ -283,8 +290,8 @@ struct RecordPaymentSheet: View {
         for debt in myBalances {
             // Determine if the user is the payer or recipient
             if debt.from.id == currentUser.id {
-                // User owes money to someone else
-                let paymentTitle = "Payment from \(currentUser.name) to \(debt.to.name)"
+                // User owes money to someone else - use localized payment title
+                let paymentTitle = String(format: "payment_from_to".localized, currentUser.name, debt.to.name)
                 
                 viewModel.addPaymentToCurrentTrip(
                     title: paymentTitle,
@@ -294,8 +301,8 @@ struct RecordPaymentSheet: View {
                     currencyCode: trip.baseCurrencyCode
                 )
             } else {
-                // Someone owes money to the user
-                let paymentTitle = "Payment from \(debt.from.name) to \(currentUser.name)"
+                // Someone owes money to the user - use localized payment title
+                let paymentTitle = String(format: "payment_from_to".localized, debt.from.name, currentUser.name)
                 
                 viewModel.addPaymentToCurrentTrip(
                     title: paymentTitle,

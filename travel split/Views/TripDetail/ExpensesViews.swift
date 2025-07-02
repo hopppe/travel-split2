@@ -1,6 +1,6 @@
 //
 //  ExpensesViews.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -28,7 +28,7 @@ struct ExpensesListView: View {
                 if trip.expenses.isEmpty {
                     EmptyExpensesView(onAddExpense: onAddExpense)
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("No expenses")
+                        .accessibilityLabel("no_expenses".localized)
                         .padding(.top, 6) // Slightly increased padding
                 } else {
                     ExpensesContentView(
@@ -57,19 +57,19 @@ struct EmptyExpensesView: View {
                 .foregroundColor(.accentColor)
                 .accessibilityHidden(true)
             
-            Text("No Expenses Yet")
+            Text("no_expenses_yet".localized)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .accessibilityAddTraits(.isHeader)
             
-            Text("Add your first expense to start tracking")
+            Text("add_first_expense".localized)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
             Button(action: onAddExpense) {
-                Label("Add Expense", systemImage: "plus.circle.fill")
+                Label("add_expense".localized, systemImage: "plus.circle.fill")
                     .font(.headline)
                     .padding()
                     .frame(maxWidth: .infinity)
@@ -79,8 +79,8 @@ struct EmptyExpensesView: View {
             }
             .padding(.horizontal, 40)
             .padding(.top, 8)
-            .accessibilityLabel("Add your first expense")
-            .accessibilityHint("Creates a new expense for this trip")
+            .accessibilityLabel("add_your_first_expense".localized)
+            .accessibilityHint("creates_new_expense".localized)
         }
         .padding()
     }
@@ -174,7 +174,7 @@ struct ExpensesContentView: View {
             }
             .padding(.trailing, 20)
             .padding(.bottom, 20)
-            .accessibilityLabel("Add expense")
+            .accessibilityLabel("add_expense".localized)
         }
     }
     
@@ -235,26 +235,26 @@ struct ExpenseRowView: View {
             )
         }
         .swipeActions(edge: .trailing) {
-            Button("Delete", role: .destructive) {
+            Button("delete".localized, role: .destructive) {
                 isShowingDeleteConfirmation = true
             }
         }
         .confirmationDialog(
-            "Delete Expense",
+            "delete_expense".localized,
             isPresented: $isShowingDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button("delete".localized, role: .destructive) {
                 viewModel.deleteExpense(withId: expense.id)
             }
             
-            Button("Cancel", role: .cancel) { }
+            Button("cancel".localized, role: .cancel) { }
         } message: {
-            Text("Are you sure you want to delete this expense?")
+            Text("are_you_sure_delete_expense".localized)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
-        .accessibilityHint("Double tap to edit expense")
+        .accessibilityHint("double_tap_edit_expense".localized)
     }
     
     // MARK: - Helper Properties
@@ -349,11 +349,12 @@ struct ExpenseDetails: View {
     var showDate: Bool = true
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
             // Title
             Text(expense.title)
                 .font(.headline)
                 .foregroundColor(.primary)
+                .rtlAwareAlignment()
             
             // Payer info
             PayerText(expense: expense, trip: trip)
@@ -363,6 +364,7 @@ struct ExpenseDetails: View {
                 Text(dateFormatter.string(from: expense.date))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .rtlAwareAlignment()
             }
         }
     }
@@ -375,13 +377,15 @@ struct PayerText: View {
     
     var body: some View {
         if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
-            Text("Paid by \(payer.name)")
+            Text("\("paid_by".localized) \(payer.name)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .rtlAwareAlignment()
         } else {
-            Text("Paid by \(expense.paidBy.name)")
+            Text("\("paid_by".localized) \(expense.paidBy.name)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .rtlAwareAlignment()
         }
     }
 }
@@ -395,7 +399,7 @@ struct ExpenseContextMenu: View {
         Button {
             onEdit()
         } label: {
-            Label("Edit Expense", systemImage: "pencil")
+            Label("edit_expense".localized, systemImage: "pencil")
         }
         
         Divider()
@@ -403,7 +407,7 @@ struct ExpenseContextMenu: View {
         Button(role: .destructive) {
             onDelete()
         } label: {
-            Label("Delete", systemImage: "trash.fill")
+            Label("delete".localized, systemImage: "trash.fill")
                 .foregroundColor(.red)
         }
     }

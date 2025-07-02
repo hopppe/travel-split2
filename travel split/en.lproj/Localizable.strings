@@ -1,0 +1,380 @@
+/* 
+   Localizable.strings (English)
+   EquiSplit
+   
+   Created for Arabic localization support
+*/
+
+// MARK: - App Name and Core
+"app_name" = "EquiSplit";
+
+// MARK: - Welcome Screen
+"welcome_title" = "Split group expenses";
+"welcome_subtitle" = "Easily track and split costs with friends on your next adventure";
+"continue_without_email" = "Continue without email";
+"enter_your_name" = "Enter your name";
+"continue" = "Continue";
+"sign_in" = "Sign In";
+"create_account" = "Create Account";
+
+// MARK: - Authentication
+"name" = "Name";
+"email" = "Email";
+"password" = "Password";
+"cancel" = "Cancel";
+"ok" = "OK";
+"done" = "Done";
+"save" = "Save";
+"delete" = "Delete";
+"edit" = "Edit";
+
+// MARK: - Trip Management
+"groups" = "Groups";
+"my_groups" = "My Groups";
+"create_new_group" = "Create New Group";
+"join_group" = "Join Group";
+"participants" = "Participants";
+"participant" = "participant";
+"owed" = "owed";
+"owe" = "owe";
+"settled" = "settled";
+"leave_group" = "Leave Group";
+"delete_group" = "Delete Group";
+"group_name" = "Group Name";
+"group_description" = "Description";
+
+// MARK: - Expenses
+"expenses" = "Expenses";
+"no_expenses_yet" = "No Expenses Yet";
+"add_first_expense" = "Add your first expense to start tracking";
+"add_expense" = "Add Expense";
+"expense_info" = "Expense Info";
+"description" = "Description";
+"amount" = "Amount";
+"paid_by" = "Paid By";
+"split_between" = "Split Between";
+"save_expense" = "Save Expense";
+"update_expense" = "Update Expense";
+"edit_expense" = "Edit Expense";
+"delete_expense" = "Delete Expense";
+"on_date" = "On";
+"select_date" = "Select Date";
+
+// MARK: - Balances
+"balances" = "Balances";
+"all_settled_up" = "All Settled Up!";
+"everyone_paid_share" = "Everyone has paid their fair share";
+"record_payment" = "Record a Payment";
+"no_expenses_calculate" = "No Expenses to Calculate";
+"add_expenses_see_balances" = "Add expenses to see who owes what";
+"all_settled_up_lowercase" = "all settled up";
+"total_trip_cost" = "Total Trip Cost";
+"average_per_person" = "Average Per Person";
+"balance_details" = "Balance Details";
+"contributing_expenses" = "Contributing Expenses";
+"person_totals" = "Person Totals";
+"how_we_simplified" = "How We Simplified";
+"balance_simplification_explanation" = "This balance shows the simplified debt after calculating all shared expenses between these two people.";
+
+// MARK: - Payments
+"payment_details" = "Payment Details";
+"from" = "From";
+"to" = "To";
+"settle_all_balances" = "Settle All My Balances";
+"select_currency" = "Select currency";
+"payment_amount" = "Payment amount";
+
+// MARK: - Participants
+"add_participant" = "Add Participant";
+"found_existing_participants" = "We found existing participants that might be you";
+"claim_participant_description" = "A participant with similar name or email was found in this trip. Do you want to claim this participant as your account?";
+"claim" = "Claim";
+"join_as_new_participant" = "Join as a new participant";
+"select_participant_to_claim" = "Select a participant to claim";
+"your_name" = "Your Name";
+"edit_name" = "Edit Name";
+"update_name_group_only" = "This will update your name in this group only.";
+"select_participant_to_join_as" = "Select a participant to join as";
+"no_participants_to_claim" = "No participants to claim";
+"claim_participant_footer" = "If none of these participants are you, join as a new participant instead.";
+"paid_by_colon" = "Paid by:";
+"total_colon" = "Total:";
+"paid_suffix" = "paid";
+
+// MARK: - Profile & Settings
+"profile" = "Profile";
+"settings" = "Settings";
+"account" = "Account";
+"account_settings" = "Account Settings";
+"sign_out" = "Sign Out";
+"delete_account" = "Delete Account";
+"feedback" = "Feedback";
+"save_name" = "Save Name";
+"update_profile" = "Update Profile";
+"delete_all_data" = "Delete All Data";
+
+// MARK: - Navigation
+"join_trip" = "Join Trip";
+"invite_code" = "Invite Code";
+"enter_invite_code" = "Enter the invite code to join a trip.";
+"welcome_to_equisplit" = "Welcome to EquiSplit";
+
+// MARK: - Alerts & Confirmations
+"error" = "Error";
+"sign_out_confirmation" = "Sign Out Confirmation";
+"are_you_sure_sign_out" = "Are you sure you want to sign out?";
+"cannot_leave_group" = "Cannot Leave Group";
+"outstanding_balance_warning" = "You have an outstanding balance of %@. You must settle all debts before leaving the group.";
+"last_participant_warning" = "You are the last participant in this group. The group will be permanently deleted and cannot be recovered.";
+"leave_group_warning" = "You will be removed from this group but other participants will still have access.";
+"delete_data_confirmation" = "Are you sure you want to delete all your data? This action cannot be undone.\n\nAll your trips, expenses, and personal information will be permanently deleted from this device. You will be taken back to the welcome screen.";
+"delete_account_confirmation" = "Are you sure you want to delete your account? This action cannot be undone.\n\nYour account will be permanently deleted, but you will remain as a placeholder participant in any groups you've joined. Other group members will still be able to see your expenses and balances.";
+
+// MARK: - Currency
+"change_currency" = "Change Currency";
+"select_currency_button" = "Select currency";
+"expense_amount" = "Expense amount";
+
+// MARK: - Actions
+"share_group" = "Share Group";
+"reset_password" = "Reset Password";
+"send_reset_link" = "Send Reset Link";
+"enter_email_reset" = "Enter your email address to receive a password reset link.";
+
+// MARK: - Feedback
+"feedback_message" = "Please submit any feedback for the app:";
+
+// MARK: - Accessibility
+"expense_description" = "Expense description";
+"select_who_paid" = "Select who paid for this expense";
+"select_expense_date" = "Select expense date";
+"add_first_expense_hint" = "Creates a new expense for this trip";
+"record_payment_hint" = "Record a payment";
+"claim_participant_hint" = "Claim this participant as your account";
+"join_new_participant_hint" = "Join the trip as a new participant";
+
+// MARK: - Status Messages
+"you_are_owed" = "You are owed";
+"you_owe" = "You owe";
+"you_are_settled_up" = "You are settled up";
+"paid_by_format" = "Paid by %@";
+"total_format" = "Total: %@";
+
+// MARK: - Empty States
+"no_trips_yet" = "No trips yet";
+"create_first_trip" = "Create your first trip to get started";
+
+// MARK: - Language Settings
+"language" = "Language";
+"select_language" = "Select Language";
+
+// MARK: - Additional Authentication
+"reset_password" = "Reset Password";
+"send_reset_link" = "Send Reset Link";
+"enter_email_reset" = "Enter your email address to receive a password reset link.";
+
+// MARK: - Profile and Settings
+"profile" = "Profile";
+"account" = "Account";
+"account_settings" = "Account Settings";
+"settings" = "Settings";
+"save_name" = "Save Name";
+"update_profile" = "Update Profile";
+"delete_all_data" = "Delete All Data";
+"delete_account" = "Delete Account";
+"sign_out" = "Sign Out";
+"feedback" = "Feedback";
+"feedback_message" = "Please submit any feedback for the app:";
+"welcome_to_equisplit" = "Welcome to EquiSplit";
+
+// MARK: - Confirmation Messages
+"sign_out_confirmation" = "Sign Out Confirmation";
+"are_you_sure_sign_out" = "Are you sure you want to sign out?";
+"delete_data_confirmation" = "Are you sure you want to delete all your data? This action cannot be undone.\n\nAll your trips, expenses, and personal information will be permanently deleted from this device. You will be taken back to the welcome screen.";
+"delete_account_confirmation" = "Are you sure you want to delete your account? This action cannot be undone.\n\nYour account will be permanently deleted, but you will remain as a placeholder participant in any groups you've joined. Other group members will still be able to see your expenses and balances.";
+
+// MARK: - Trip Joining
+"enter_invite_code" = "Enter the invite code to join a trip.";
+"invite_code" = "Invite Code";
+"join_trip" = "Join Trip";
+
+// MARK: - Trip List and Management
+"groups" = "Groups";
+"your_groups" = "Your Groups";
+"no_groups_yet" = "No Groups Yet";
+"create_group_description" = "Create a new group to start tracking expenses with friends";
+"create_new_group" = "Create New Group";
+"join_group" = "Join Group";
+"edit_profile" = "Edit profile";
+"add_options" = "Add options";
+"participants" = "participants";
+"owed" = "owed";
+"owe" = "owe";
+"settled" = "settled";
+"you_are_owed" = "You are owed";
+"you_owe" = "You owe";
+"you_are_settled_up" = "You are settled up";
+"no_expenses" = "No expenses";
+
+// MARK: - Trip Actions
+"leave" = "Leave";
+"share_group" = "Share Group";
+"leave_group" = "Leave Group";
+"cannot_leave_group" = "Cannot Leave Group";
+"leave_group_confirmation" = "You will be removed from this group but other participants will still have access.";
+"leave_group_last_participant" = "You are the last participant in this group. The group will be permanently deleted and cannot be recovered.";
+"outstanding_balance_message" = "You have an outstanding balance of %@. You must settle all debts before leaving the group.";
+"settle_debts_message" = "You must settle all debts before leaving the group.";
+
+// MARK: - New Group Creation
+"new_group" = "New Group";
+"group_details" = "Group Details";
+"group_name" = "Group Name";
+"description_optional" = "Description (Optional)";
+"add_participants" = "Add Participants";
+"hide_participants" = "Hide Participants";
+"previous_participants" = "Previous Participants";
+"add_more" = "Add More";
+"create" = "Create";
+"group_creation_description_with_participants" = "Add participants now or you can add them later after creating the group.";
+"group_creation_description_without_participants" = "Enter details for your new group. You can add participants and expenses after creating the group.";
+
+// MARK: - Join Group
+"join_group_title" = "Join Group";
+"enter_invite_code_header" = "Enter Invite Code";
+"join_group_description" = "Enter the code shared with you to join an existing group. This code is found in the group's share menu.";
+"group_invite_code" = "Group invite code";
+"join" = "Join";
+
+// MARK: - Network Status
+"offline_mode" = "Offline Mode - Changes will sync when connection is restored";
+
+// MARK: - Accessibility
+"selected" = "selected";
+"double_tap_to_remove" = "Double tap to remove";
+"double_tap_to_add" = "Double tap to add";
+"create_new_group_hint" = "Creates a new group to track expenses";
+"no_trips" = "No trips";
+
+// MARK: - Navigation
+"trip_not_found" = "Trip not found";
+
+// MARK: - Trip Detail Tabs
+"expenses" = "Expenses";
+"balances" = "Balances";
+"participants" = "Participants";
+
+// MARK: - Trip Actions Menu
+"add_expense" = "Add Expense";
+"add_participant" = "Add Participant";
+"change_currency" = "Change Currency";
+
+// MARK: - Leave Group
+"leave_group_last_participant" = "You are the last participant in this group. The group will be permanently deleted and cannot be recovered.";
+"leave_group_confirmation" = "You will be removed from this group but other participants will still have access.";
+"cannot_leave_group" = "Cannot Leave Group";
+"outstanding_balance_message" = "You have an outstanding balance of %@. You must settle all debts before leaving the group.";
+
+// MARK: - Expense Management
+"no_expenses_yet" = "No Expenses Yet";
+"add_first_expense" = "Add your first expense to start tracking";
+"add_your_first_expense" = "Add your first expense";
+"creates_new_expense" = "Creates a new expense for this trip";
+"paid_by" = "Paid by";
+"edit_expense" = "Edit Expense";
+"delete_expense" = "Delete Expense";
+"are_you_sure_delete_expense" = "Are you sure you want to delete this expense?";
+"double_tap_edit_expense" = "Double tap to edit expense";
+"expense" = "Expense";
+"no_expenses" = "No expenses";
+
+// MARK: - Expense Sheets
+"add_expense_title" = "Add Expense";
+"edit_expense_title" = "Edit Expense";
+"expense_info" = "Expense Info";
+"description" = "Description";
+"amount" = "Amount";
+"select_currency" = "Select currency";
+"expense_description" = "Expense description";
+"expense_amount" = "Expense amount";
+"select_who_paid" = "Select who paid for this expense";
+"on" = "On";
+"select_expense_date" = "Select expense date";
+"split_between" = "Split Between";
+"expense_date" = "Expense Date";
+"select_date" = "Select Date";
+"done" = "Done";
+
+// MARK: - Balance Management
+"all_settled_up" = "All Settled Up!";
+"everyone_paid_fair_share" = "Everyone has paid their fair share";
+"record_a_payment" = "Record a Payment";
+"no_expenses_to_calculate" = "No Expenses to Calculate";
+"add_expenses_to_see_debts" = "Add expenses to see who owes what";
+"your_balance" = "Your Balance";
+"who_owes_what" = "Who Owes What";
+"summary" = "Summary";
+"all_amounts_shown_in" = "All amounts shown in %@";
+"you" = "You";
+"will_receive" = "will receive";
+"owes_others" = "owes others";
+"is_settled_up" = "is settled up";
+"owes" = "owes";
+"all_settled_up_lowercase" = "all settled up";
+"total_trip_cost" = "Total Trip Cost";
+"average_per_person" = "Average Per Person";
+"tap_to_see_breakdown" = "Tap to see balance breakdown";
+"tap_to_see_debt_breakdown" = "Tap to see breakdown";
+
+// MARK: - Participant Management
+"people_in_this_group" = "People in this group";
+"edit_name" = "Edit Name";
+"remove_participant" = "Remove Participant";
+"share_invite_link" = "Share Invite Link";
+"long_press_for_options" = "Long press for options";
+"invite_people_to_claim" = "Invite People to Claim Placeholders";
+"share_group_to_claim" = "Share group to let others claim placeholder participants";
+"unclaimed_participants_message" = "You have %@ unclaimed placeholder %@. Share the group link so others can join and claim these participants.";
+"participant" = "participant";
+"participants" = "participants";
+"add_participant_tip" = "Tip: You can add placeholder participants that others can claim when they join.";
+"add_new_participant_hint" = "Add a new participant to this group";
+"cannot_remove_participant" = "Cannot Remove Participant";
+"participant_has_balance" = "%@ has an outstanding balance. Participants with balances cannot be removed until their balance is zero.";
+"participants_with_balances_cannot_remove" = "Participants with outstanding balances cannot be removed.";
+"are_you_sure_remove_participant" = "Are you sure you want to remove %@ from this group?";
+"are_you_sure_remove_this_participant" = "Are you sure you want to remove this participant?";
+"remove" = "Remove";
+"your_name" = "Your Name";
+"enter_your_name" = "Enter your name";
+"edit_name_title" = "Edit Name";
+"update_name_in_group_only" = "This will update your name in this group only.";
+"placeholder_participant" = "placeholder participant";
+"placeholder" = "Placeholder";
+"save" = "Save";
+
+// MARK: - Add Participant Sheet
+"previous_participants" = "Previous Participants";
+"add_participants" = "Add Participants";
+"name" = "Name";
+"add_more" = "Add More";
+"add_participants_title" = "Add Participants";
+"selected" = "selected";
+"double_tap_to_remove" = "Double tap to remove";
+"double_tap_to_add" = "Double tap to add";
+
+// MARK: - Record Payment Sheet
+"payment_details" = "Payment Details";
+"payment_amount" = "Payment amount";
+"from" = "From";
+"to" = "To";
+"select_recipient" = "Select recipient";
+"note_optional" = "Note (optional)";
+"payment_note" = "Payment note";
+"record_payment_info" = "Recording a payment helps keep track of who has settled their debts. This creates a special expense that shows the debt has been paid.";
+"record_payment" = "Record Payment";
+"settle_all_my_balances" = "Settle All My Balances";
+"record_payment_title" = "Record Payment";
+"select_currency_title" = "Select Currency";
+"recording_payments" = "Recording payments...";
+"payment_from_to" = "Payment from %@ to %@"; 

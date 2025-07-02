@@ -1,6 +1,6 @@
 # Firestore Security Rules - Testing Guide
 
-The security rules have been updated to provide proper access control for your Split Pro app. Here's how to test and ensure they're working as expected.
+The security rules have been updated to provide proper access control for your EquiSplit app. Here's how to test and ensure they're working as expected.
 
 ## Understanding the Rules
 

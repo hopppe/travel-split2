@@ -1,6 +1,6 @@
 //
 //  BalanceBreakdownSheet.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 4/8/25.
 //
@@ -70,7 +70,7 @@ struct BalanceBreakdownSheet: View {
             
             // Contributing Expenses Section
             if !contributingExpenses.isEmpty {
-                Section(header: Text("Contributing Expenses")) {
+                Section(header: Text("contributing_expenses".localized)) {
                     ForEach(contributingExpenses) { expense in
                         ExpenseBreakdownCard(
                             expense: expense,
@@ -83,7 +83,7 @@ struct BalanceBreakdownSheet: View {
             }
             
             // Person Totals Section
-            Section(header: Text("Person Totals")) {
+            Section(header: Text("person_totals".localized)) {
                 ForEach(getPersonTotals(), id: \.user.id) { total in
                     HStack {
                         Text(total.user.name)
@@ -97,11 +97,15 @@ struct BalanceBreakdownSheet: View {
                 }
             }
             
-            // Simplification Section
-            Section(header: Text("How We Simplified")) {
-                Text(simplificationExplanation)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 8)
+            // Simplification Explanation Section
+            Section(header: Text("how_we_simplified".localized)) {
+                VStack(alignment: languageAwareHorizontalAlignment, spacing: 8) {
+                    Text("balance_simplification_explanation".localized)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
+                }
+                .padding(.vertical, 4)
             }
         }
         .navigationTitle("Balance Details")
@@ -292,7 +296,7 @@ struct ExpenseBreakdownCard: View {
     let currencySymbol: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: languageAwareHorizontalAlignment, spacing: 8) {
             // Expense header
             HStack {
                 HStack(spacing: 6) {
@@ -312,12 +316,12 @@ struct ExpenseBreakdownCard: View {
             
             // Expense amount and payer
             HStack {
-                Text("Paid by: \(expense.paidBy.name)")
+                Text("\("paid_by_colon".localized) \(expense.paidBy.name)")
                     .font(.subheadline)
                 
                 Spacer()
                 
-                Text("Total: \(formatCurrency(expense.amount))")
+                Text("\("total_colon".localized) \(formatCurrency(expense.amount))")
                     .font(.subheadline)
                     .fontWeight(.semibold)
             }
@@ -326,7 +330,7 @@ struct ExpenseBreakdownCard: View {
                 .padding(.vertical, 4)
             
             // Expense breakdown
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 // For current user view, we need to show their contribution
                 // and also any relevant shares from other users
                 let relevantShares = getRelevantShares()
@@ -348,7 +352,7 @@ struct ExpenseBreakdownCard: View {
                 // Show what the payer contributed (positive amount)
                 if isUserInvolved(expense.paidBy) {
                     HStack {
-                        Text("\(expense.paidBy.name) paid")
+                        Text("\(expense.paidBy.name) \("paid_suffix".localized)")
                             .font(.footnote)
                             .fontWeight(.medium)
                         

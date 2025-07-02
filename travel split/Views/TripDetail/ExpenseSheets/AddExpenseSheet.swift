@@ -1,6 +1,6 @@
 //
 //  AddExpenseSheet.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -23,20 +23,22 @@ struct AddExpenseSheet: View {
     @State private var expenseDate = Date()
     @State private var showDatePicker = false
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     // Currency options
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼"]
+    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼", "JD", "د.إ"]
     
     var body: some View {
         mainForm
-            .navigationTitle("Add Expense")
+            .navigationTitle("add_expense_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-                    .navigationBarBackButtonHidden(true)
         .navigationBarItems(
-            leading: Button("Cancel") {
+            leading: Button("cancel".localized) {
                 dismiss()
             },
-            trailing: Button("Save") {
+            trailing: Button("save".localized) {
                 saveExpense()
             }
             .disabled(!isFormValid())
@@ -67,6 +69,7 @@ struct AddExpenseSheet: View {
                 participantsSection(trip: trip)
             }
         }
+        .forceRTL()
     }
     
     private var currencyPickerSheet: some View {
@@ -75,35 +78,40 @@ struct AddExpenseSheet: View {
             isPresented: $showCurrencyPicker,
             options: currencyOptions
         )
+        .environmentObject(languageManager)
     }
     
     private var datePickerSheet: some View {
         NavigationStack {
-            DatePicker("Expense Date", selection: $expenseDate, displayedComponents: .date)
+            DatePicker("expense_date".localized, selection: $expenseDate, displayedComponents: .date)
                 .datePickerStyle(.graphical)
+                .environment(\.locale, languageManager.currentLocale)
                 .padding()
-                .navigationTitle("Select Date")
+                .navigationTitle("select_date".localized)
                 .navigationBarTitleDisplayMode(.inline)
-                                    .navigationBarItems(
-                        trailing: Button("Done") {
-                            showDatePicker = false
-                        }
-                    )
+                .navigationBarItems(
+                    trailing: Button("done".localized) {
+                        showDatePicker = false
+                    }
+                )
         }
         .presentationDetents([.medium])
+        .stableLocalized()
     }
     
     // MARK: - View Components
     
     private var expenseInfoSection: some View {
-        Section(header: Text("Expense Info")) {
-            TextField("Description", text: $expenseName)
-                .accessibilityLabel("Expense description")
+        Section(header: Text("expense_info".localized)) {
+            TextField("description".localized, text: $expenseName)
+                .safeRTLTextField()
+                .accessibilityLabel("expense_description".localized)
             
             HStack {
                 currencyButton
                 amountTextField
             }
+            .rtlHStack()
         }
     }
     
@@ -116,21 +124,23 @@ struct AddExpenseSheet: View {
                 .background(Color(UIColor.systemGray5))
                 .cornerRadius(8)
         }
-        .accessibilityLabel("Select currency")
+        .accessibilityLabel("select_currency".localized)
     }
     
     private var amountTextField: some View {
-        TextField("Amount", text: $expenseAmount)
+        TextField("amount".localized, text: $expenseAmount)
             .keyboardType(.decimalPad)
-            .accessibilityLabel("Expense amount")
+            .safeRTLTextField()
+            .accessibilityLabel("expense_amount".localized)
     }
     
     private func payerSection(trip: Trip) -> some View {
         Section {
             HStack {
-                Text("Paid By")
+                Text("paid_by".localized)
                     .font(.body)
                     .foregroundColor(.primary)
+                    .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                 
                 Spacer()
                 
@@ -141,31 +151,32 @@ struct AddExpenseSheet: View {
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .rtlHStack()
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Select who paid for this expense")
+            .accessibilityLabel("select_who_paid".localized)
             
             HStack {
-                Text("On")
+                Text("on".localized)
                     .font(.body)
                     .foregroundColor(.primary)
+                    .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                 
                 Spacer()
                 
                 Button(action: { showDatePicker = true }) {
-                    Text(expenseDate, style: .date)
+                    Text(formattedDate)
                         .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
+            .rtlHStack()
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Select expense date")
+            .accessibilityLabel("select_expense_date".localized)
         }
     }
     
     private func participantsSection(trip: Trip) -> some View {
-        Section(header: Text("Split Between")) {
+        Section(header: Text("split_between".localized)) {
             ForEach(trip.participants) { user in
                 participantRow(for: user)
             }
@@ -385,10 +396,20 @@ struct AddExpenseSheet: View {
             "₴": "UAH",
             "₦": "NGN",
             "R": "ZAR",
-            "﷼": "SAR"
+            "﷼": "SAR",
+            "JD": "JOD",
+            "د.إ": "AED"
         ]
         
         return currencyCodes[symbol] ?? "USD"
+    }
+    
+    // Helper computed property for formatted date
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = languageManager.currentLocale
+        formatter.dateStyle = .medium
+        return formatter.string(from: expenseDate)
     }
 }
 

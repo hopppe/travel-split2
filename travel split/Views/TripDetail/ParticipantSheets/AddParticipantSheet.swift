@@ -1,6 +1,6 @@
 //
 //  AddParticipantSheet.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -60,8 +60,8 @@ struct AddPreviousParticipantView: View {
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(participant.name)\(isSelected ? ", selected" : "")")
-        .accessibilityHint(isSelected ? "Double tap to remove" : "Double tap to add")
+        .accessibilityLabel("\(participant.name)\(isSelected ? ", \("selected".localized)" : "")")
+        .accessibilityHint(isSelected ? "double_tap_to_remove".localized : "double_tap_to_add".localized)
     }
 }
 
@@ -73,12 +73,15 @@ struct AddParticipantSheet: View {
     @State private var previousParticipants: [User] = []
     @State private var selectedPreviousParticipants = Set<String>()
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         NavigationStack {
             Form {
                 // Previous participants suggestions
                 if !previousParticipants.isEmpty {
-                    Section(header: Text("Previous Participants")) {
+                    Section(header: Text("previous_participants".localized)) {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(previousParticipants) { participant in
@@ -97,10 +100,11 @@ struct AddParticipantSheet: View {
                     }
                 }
                 
-                Section(header: Text("Add Participants")) {
+                Section(header: Text("add_participants".localized)) {
                     ForEach(0..<participants.count, id: \.self) { index in
                         VStack(spacing: 12) {
-                            TextField("Name", text: $participants[index].name)
+                            TextField("name".localized, text: $participants[index].name)
+                                .safeRTLTextField()
                                 .padding(.vertical, 4)
                         }
                         .padding(.bottom, 8)
@@ -124,24 +128,25 @@ struct AddParticipantSheet: View {
                         HStack {
                             Image(systemName: "plus.circle.fill")
                                 .foregroundColor(.accentColor)
-                            Text("Add More")
+                            Text("add_more".localized)
                                 .foregroundColor(.accentColor)
+                                .rtlAwareAlignment()
                         }
                     }
                     .padding(.vertical, 8)
                 }
             }
-            .navigationTitle("Add Participants")
+            .navigationTitle("add_participants_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("save".localized) {
                         saveParticipants()
                     }
                     .disabled(!isFormValid)
@@ -156,6 +161,7 @@ struct AddParticipantSheet: View {
                 }
             }
         }
+        .forceRTL()
     }
     
     // Form validation

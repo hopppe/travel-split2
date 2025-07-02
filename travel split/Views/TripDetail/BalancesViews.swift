@@ -1,6 +1,6 @@
 //
 //  BalancesViews.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -74,12 +74,12 @@ struct SettledUpView: View {
                 .foregroundColor(.accentColor)
                 .accessibilityHidden(true)
             
-            Text("All Settled Up!")
+            Text("all_settled_up".localized)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .accessibilityAddTraits(.isHeader)
             
-            Text("Everyone has paid their fair share")
+            Text("everyone_paid_fair_share".localized)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 30)
@@ -90,7 +90,7 @@ struct SettledUpView: View {
             }) {
                 HStack {
                     Image(systemName: "arrow.left.arrow.right.circle.fill")
-                    Text("Record a Payment")
+                    Text("record_a_payment".localized)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -99,11 +99,11 @@ struct SettledUpView: View {
                 .cornerRadius(10)
             }
             .padding(.horizontal, 40)
-            .accessibilityLabel("Record a payment")
+            .accessibilityLabel("record_a_payment".localized)
         }
         .padding()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("All settled up. Everyone has paid their fair share.")
+        .accessibilityLabel("\("all_settled_up".localized). \("everyone_paid_fair_share".localized).")
         .sheet(isPresented: $showingRecordPaymentSheet) {
             NavigationStack {
                 RecordPaymentSheet(viewModel: viewModel)
@@ -124,12 +124,12 @@ struct NoExpensesView: View {
                 .foregroundColor(.accentColor.opacity(0.5))
                 .accessibilityHidden(true)
             
-            Text("No Expenses to Calculate")
+            Text("no_expenses_to_calculate".localized)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .accessibilityAddTraits(.isHeader)
             
-            Text("Add expenses to see who owes what")
+            Text("add_expenses_to_see_debts".localized)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 30)
@@ -140,7 +140,7 @@ struct NoExpensesView: View {
             }) {
                 HStack {
                     Image(systemName: "arrow.left.arrow.right.circle.fill")
-                    Text("Record a Payment")
+                    Text("record_a_payment".localized)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -149,11 +149,11 @@ struct NoExpensesView: View {
                 .cornerRadius(10)
             }
             .padding(.horizontal, 40)
-            .accessibilityLabel("Record a payment")
+            .accessibilityLabel("record_a_payment".localized)
         }
         .padding()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("No expenses to calculate. Add expenses to see who owes what.")
+        .accessibilityLabel("\("no_expenses_to_calculate".localized). \("add_expenses_to_see_debts".localized).")
         .sheet(isPresented: $showingRecordPaymentSheet) {
             NavigationStack {
                 RecordPaymentSheet(viewModel: viewModel)
@@ -175,7 +175,7 @@ struct BalancesContentView: View {
         VStack {
             List {
                 // User balance overview section
-                Section(header: Text("Your Balance")) {
+                Section(header: Text("your_balance".localized)) {
                     if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
                         UserBalanceRow(
                             user: currentUserInTrip,
@@ -196,7 +196,7 @@ struct BalancesContentView: View {
                 }
                 
                 // Debts section
-                Section(header: Text("Who Owes What")) {
+                Section(header: Text("who_owes_what".localized)) {
                     // First show actual debts
                     ForEach(debts, id: \.id) { debt in
                         DebtRowView(
@@ -227,7 +227,7 @@ struct BalancesContentView: View {
                 }
                 
                 // Summary section
-                Section(header: Text("Summary")) {
+                Section(header: Text("summary".localized)) {
                     TotalSummaryView(trip: trip, currencySymbol: trip.baseCurrencySymbol)
                 }
                 
@@ -236,7 +236,7 @@ struct BalancesContentView: View {
                     HStack {
                         Image(systemName: "info.circle")
                             .foregroundColor(.secondary)
-                        Text("All amounts shown in \(trip.baseCurrencyCode)")
+                        Text("all_amounts_shown_in".localized(with: trip.baseCurrencyCode))
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -250,7 +250,7 @@ struct BalancesContentView: View {
             }) {
                 HStack {
                     Image(systemName: "arrow.left.arrow.right.circle.fill")
-                    Text("Record a Payment")
+                    Text("record_a_payment".localized)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -260,7 +260,7 @@ struct BalancesContentView: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .accessibilityLabel("Record a payment")
+            .accessibilityLabel("record_a_payment".localized)
             .sheet(isPresented: $showingRecordPaymentSheet) {
                 NavigationStack {
                     RecordPaymentSheet(viewModel: viewModel)
@@ -312,13 +312,15 @@ struct UserBalanceRow: View {
             }
             .accessibilityHidden(true)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(isCurrentUser ? "You" : user.name)
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
+                Text(isCurrentUser ? "you".localized : user.name)
                     .font(.headline)
+                    .rtlAwareAlignment()
                 
                 Text(balanceDescription)
                     .font(.subheadline)
                     .foregroundColor(balanceColor)
+                    .rtlAwareAlignment()
             }
             
             Spacer()
@@ -336,8 +338,8 @@ struct UserBalanceRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(isCurrentUser ? "You" : user.name) \(balanceDescription) \(formattedBalance)")
-        .accessibilityHint("Tap to see balance breakdown")
+        .accessibilityLabel("\(isCurrentUser ? "you".localized : user.name) \(balanceDescription) \(formattedBalance)")
+        .accessibilityHint("tap_to_see_breakdown".localized)
         .sheet(isPresented: $showBreakdown) {
             if let debt = getFirstUserDebt() {
                 NavigationStack {
@@ -355,11 +357,11 @@ struct UserBalanceRow: View {
     /// Description of the balance (owes, receives, settled)
     private var balanceDescription: String {
         if balance > 0 {
-            return "will receive"
+            return "will_receive".localized
         } else if balance < 0 {
-            return "owes others"
+            return "owes_others".localized
         } else {
-            return "is settled up"
+            return "is_settled_up".localized
         }
     }
     
@@ -427,20 +429,23 @@ struct DebtRowView: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 Text(debt.from.name)
                     .font(.headline)
+                    .rtlAwareAlignment()
                 
                 HStack {
                     Image(systemName: "arrow.right")
                         .font(.caption)
                         .accessibilityHidden(true)
                     
-                    Text("owes")
+                    Text("owes".localized)
                         .font(.caption)
+                        .rtlAwareAlignment()
                     
                     Text(debt.to.name)
                         .font(.caption.bold())
+                        .rtlAwareAlignment()
                 }
                 .foregroundColor(.secondary)
             }
@@ -457,8 +462,8 @@ struct DebtRowView: View {
             showBreakdown = true
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(debt.from.name) owes \(debt.to.name) \(formattedAmount)")
-        .accessibilityHint("Tap to see breakdown")
+        .accessibilityLabel("\(debt.from.name) \("owes".localized) \(debt.to.name) \(formattedAmount)")
+        .accessibilityHint("tap_to_see_debt_breakdown".localized)
         .sheet(isPresented: $showBreakdown) {
             NavigationStack {
                 BalanceBreakdownSheet(
@@ -487,13 +492,15 @@ struct SettledDebtRowView: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 Text(participant.name)
                     .font(.headline)
+                    .rtlAwareAlignment()
                 
-                Text("all settled up")
+                Text("all_settled_up_lowercase".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .rtlAwareAlignment()
             }
             
             Spacer()
@@ -505,7 +512,7 @@ struct SettledDebtRowView: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(participant.name) is all settled up, zero balance")
+        .accessibilityLabel("\(participant.name) \("is_settled_up".localized), zero balance")
     }
 }
 
@@ -515,28 +522,32 @@ struct TotalSummaryView: View {
     let currencySymbol: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: languageAwareHorizontalAlignment, spacing: 12) {
             HStack {
-                Text("Total Trip Cost")
+                Text("total_trip_cost".localized)
                     .font(.headline)
+                    .rtlAwareAlignment()
                 Spacer()
                 Text(formattedTotalCost)
                     .font(.headline)
+                    .rtlAwareAlignment()
             }
             
             HStack {
-                Text("Average Per Person")
+                Text("average_per_person".localized)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .rtlAwareAlignment()
                 Spacer()
                 Text(formattedAveragePerPerson)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .rtlAwareAlignment()
             }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Total trip cost: \(formattedTotalCost), Average per person: \(formattedAveragePerPerson)")
+        .accessibilityLabel("\("total_trip_cost".localized): \(formattedTotalCost), \("average_per_person".localized): \(formattedAveragePerPerson)")
     }
     
     // MARK: - Helper Properties and Methods

@@ -1,6 +1,6 @@
 //
 //  ParticipantsViews.swift
-//  Split Pro
+//  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
 //
@@ -28,7 +28,7 @@ struct ParticipantsView: View {
             VStack {
                 List {
                     // People section
-                    Section(header: Text("People in this group")) {
+                    Section(header: Text("people_in_this_group".localized)) {
                         ForEach(trip.participants) { participant in
                             ParticipantRowView(
                                 participant: participant,
@@ -43,7 +43,7 @@ struct ParticipantsView: View {
                                         editingName = participant.name
                                         showingEditNameSheet = true
                                     } label: {
-                                        Label("Edit Name", systemImage: "pencil")
+                                        Label("edit_name".localized, systemImage: "pencil")
                                     }
                                 } else {
                                     // Remove option for other participants
@@ -51,7 +51,7 @@ struct ParticipantsView: View {
                                         participantToRemove = participant
                                         handleRemoveParticipant(participant)
                                     } label: {
-                                        Label("Remove Participant", systemImage: "person.badge.minus")
+                                        Label("remove_participant".localized, systemImage: "person.badge.minus")
                                     }
                                 }
                                 
@@ -60,14 +60,14 @@ struct ParticipantsView: View {
                                     Button {
                                         shareTrip()
                                     } label: {
-                                        Label("Share Invite Link", systemImage: "square.and.arrow.up")
+                                        Label("share_invite_link".localized, systemImage: "square.and.arrow.up")
                                     }
                                 }
                             }
                             .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .contentShape(Rectangle())
-                            .accessibilityHint("Long press for options")
+                            .accessibilityHint("long_press_for_options".localized)
                         }
                     }
                     
@@ -78,13 +78,13 @@ struct ParticipantsView: View {
                                 HStack {
                                     Image(systemName: "square.and.arrow.up")
                                         .foregroundColor(.accentColor)
-                                    Text("Invite People to Claim Placeholders")
+                                    Text("invite_people_to_claim".localized)
                                         .foregroundColor(.primary)
                                 }
                             }
-                            .accessibilityHint("Share group to let others claim placeholder participants")
+                            .accessibilityHint("share_group_to_claim".localized)
                         } footer: { 
-                            Text("You have \(unclaimedParticipantCount) unclaimed placeholder \(unclaimedParticipantCount == 1 ? "participant" : "participants"). Share the group link so others can join and claim these participants.")
+                            Text(unclaimedParticipantsMessage)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -96,13 +96,13 @@ struct ParticipantsView: View {
                             HStack {
                                 Image(systemName: "person.badge.plus")
                                     .foregroundColor(.accentColor)
-                                Text("Add Participant")
+                                Text("add_participant".localized)
                                     .foregroundColor(.primary)
                             }
                         }
-                        .accessibilityHint("Add a new participant to this group")
+                        .accessibilityHint("add_new_participant_hint".localized)
                     
-                        Text("Tip: You can add placeholder participants that others can claim when they join.")
+                        Text("add_participant_tip".localized)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
@@ -112,23 +112,23 @@ struct ParticipantsView: View {
                 .environment(\.defaultMinListRowHeight, 64)
             }
         }
-        .alert("Cannot Remove Participant", isPresented: $showingBalanceWarning) {
-            Button("OK", role: .cancel) {
+        .alert("cannot_remove_participant".localized, isPresented: $showingBalanceWarning) {
+            Button("ok".localized, role: .cancel) {
                 participantToRemove = nil
             }
         } message: {
             if let participant = participantToRemove {
-                Text("\(participant.name) has an outstanding balance. Participants with balances cannot be removed until their balance is zero.")
+                Text("participant_has_balance".localized(with: participant.name))
             } else {
-                Text("Participants with outstanding balances cannot be removed.")
+                Text("participants_with_balances_cannot_remove".localized)
             }
         }
         .confirmationDialog(
-            "Remove Participant",
+            "remove_participant".localized,
             isPresented: $showingRemoveConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Remove", role: .destructive) {
+            Button("remove".localized, role: .destructive) {
                 if let participant = participantToRemove {
                     // This will be handled by viewModel.removeParticipantFromCurrentTrip
                     let _ = viewModel.removeParticipantFromCurrentTrip(participant)
@@ -136,14 +136,14 @@ struct ParticipantsView: View {
                 }
             }
             
-            Button("Cancel", role: .cancel) {
+            Button("cancel".localized, role: .cancel) {
                 participantToRemove = nil
             }
         } message: {
             if let participant = participantToRemove {
-                Text("Are you sure you want to remove \(participant.name) from this group?")
+                Text("are_you_sure_remove_participant".localized(with: participant.name))
             } else {
-                Text("Are you sure you want to remove this participant?")
+                Text("are_you_sure_remove_this_participant".localized)
             }
         }
         .sheet(isPresented: $showingEditNameSheet) {
@@ -189,14 +189,20 @@ struct ParticipantsView: View {
         unclaimedParticipantCount > 0
     }
     
+    /// Formatted message for unclaimed participants
+    private var unclaimedParticipantsMessage: String {
+        let participantWord = unclaimedParticipantCount == 1 ? "participant".localized : "participants".localized
+        return "unclaimed_participants_message".localized(with: "\(unclaimedParticipantCount)", participantWord)
+    }
+    
     /// Build accessibility label for a participant
     private func buildAccessibilityLabel(for participant: User) -> String {
         var label = participant.name
         
         if !participant.isClaimed {
-            label += ", placeholder participant"
+            label += ", \("placeholder_participant".localized)"
         } else if isCurrentUser(participant) {
-            label += ", you"
+            label += ", \("you".localized)"
         }
         
         if !participant.email.isEmpty {
@@ -208,16 +214,11 @@ struct ParticipantsView: View {
     
     /// Share trip with others to join
     private func shareTrip() {
-        // Get the deep link URL from FirebaseService
-        let deepLinkURL = FirebaseService.shared.createDeepLink(inviteCode: trip.inviteCode)
-        
-        // Create a simple share message with just the essentials
-        let shareMessage = """
-                                                Join my group "\(trip.name)" in EquiSplit!
-        
-        Link: \(deepLinkURL)
-        Code: \(trip.inviteCode)
-        """
+        // Use the centralized share message generation
+        let shareMessage = FirebaseService.shared.generateShareMessage(
+            inviteCode: trip.inviteCode,
+            tripName: trip.name
+        )
         
         let activityVC = UIActivityViewController(
             activityItems: [shareMessage],
@@ -290,16 +291,17 @@ struct ParticipantRowView: View {
             }
             .accessibilityHidden(true)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 HStack {
                     Text(participant.name)
                         .font(.headline)
+                        .rtlAwareAlignment()
                     
                     // Show a badge if user is a placeholder or current user
                     if !participant.isClaimed {
-                        ParticipantBadge(text: "Placeholder", color: .orange)
+                        ParticipantBadge(text: "placeholder".localized, color: .orange)
                     } else if isCurrentUser {
-                        ParticipantBadge(text: "You", color: .blue)
+                        ParticipantBadge(text: "you".localized, color: .blue)
                     }
                 }
                 
@@ -307,6 +309,7 @@ struct ParticipantRowView: View {
                     Text(participant.email)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
                 }
             }
             
@@ -343,34 +346,39 @@ struct EditNameSheet: View {
     @State private var newName: String = ""
     @FocusState private var isTextFieldFocused: Bool
     
+    // Language manager for RTL support
+    @EnvironmentObject var languageManager: LanguageManager
+    
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Your Name")) {
-                    TextField("Enter your name", text: $newName)
+                Section(header: Text("your_name".localized)) {
+                    TextField("enter_your_name".localized, text: $newName)
                         .focused($isTextFieldFocused)
                         .autocapitalization(.words)
                         .disableAutocorrection(false)
-                        .accessibilityLabel("Your name")
+                        .safeRTLTextField()
+                        .accessibilityLabel("your_name".localized)
                 }
                 
                 Section {
-                    Text("This will update your name in this group only.")
+                    Text("update_name_in_group_only".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .rtlAwareAlignment()
                 }
             }
-            .navigationTitle("Edit Name")
+            .navigationTitle("edit_name_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         onCancel()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("save".localized) {
                         onSave(newName)
                     }
                     .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -381,5 +389,6 @@ struct EditNameSheet: View {
                 isTextFieldFocused = true
             }
         }
+        .stableLocalized()
     }
 }
