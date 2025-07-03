@@ -140,11 +140,21 @@ class LanguageManager: ObservableObject {
     /// Get localized string with format arguments
     /// - Parameters:
     ///   - key: The localization key
-    ///   - arguments: Format arguments
+    ///   - formatArguments: Format arguments
     /// - Returns: Formatted localized string
-    func getLocalizedString(for key: String, with arguments: CVarArg...) -> String {
+    func getLocalizedString(for key: String, withFormat formatArguments: [CVarArg]) -> String {
         let format = getLocalizedString(for: key)
-        return String(format: format, arguments: arguments)
+        return String(format: format, arguments: formatArguments)
+    }
+    
+    /// Get localized string with single format argument
+    /// - Parameters:
+    ///   - key: The localization key
+    ///   - argument: Single format argument
+    /// - Returns: Formatted localized string
+    func getLocalizedString(for key: String, withArgument argument: CVarArg) -> String {
+        let format = getLocalizedString(for: key)
+        return String(format: format, argument)
     }
     
     /// Check if current language is RTL
@@ -211,15 +221,18 @@ extension Notification.Name {
 
 // MARK: - View Extensions for RTL Support
 
+#if canImport(SwiftUI)
+import SwiftUI
+
 extension View {
     /// Apply RTL-aware leading alignment
     func leadingAlignment() -> some View {
-        self.multilineTextAlignment(LanguageManager.shared.isRTL ? .trailing : .leading)
+        self.multilineTextAlignment(LanguageManager.shared.isRTL ? TextAlignment.trailing : TextAlignment.leading)
     }
     
     /// Apply RTL-aware trailing alignment  
     func trailingAlignment() -> some View {
-        self.multilineTextAlignment(LanguageManager.shared.isRTL ? .leading : .trailing)
+        self.multilineTextAlignment(LanguageManager.shared.isRTL ? TextAlignment.leading : TextAlignment.trailing)
     }
     
     /// Apply environment for RTL support
@@ -232,4 +245,5 @@ extension View {
     func forceRTLLayout() -> some View {
         self.environment(\.layoutDirection, LanguageManager.shared.layoutDirection)
     }
-} 
+}
+#endif 

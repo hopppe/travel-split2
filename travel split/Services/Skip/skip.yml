@@ -1,0 +1,5 @@
+dependencies:
+  - SkipFoundation
+
+# Basic configuration for Services
+# Firebase integration will be handled by Skip automatically 

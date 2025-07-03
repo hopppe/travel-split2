@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
 
 // Manages balance calculations and currency operations for trips
 class TripBalanceCalculator {

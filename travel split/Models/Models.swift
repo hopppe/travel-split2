@@ -3,61 +3,79 @@
 //  EquiSplit
 //
 //  Created by Ethan Hoppe on 3/5/25.
-//
+// 
 
 import Foundation
 
 // MARK: - User Model
-struct User: Identifiable, Codable, Equatable, Hashable {
-    var id: String // Unique identifier 
-    var name: String
-    var email: String
-    var profileImage: String? // URL or asset name for profile image
-    var isClaimed: Bool = true // Whether this participant has been claimed by a real user
-    var claimedByUserId: String? // ID of the user who claimed this participant (if any)
+public struct User: Identifiable, Codable, Equatable, Hashable {
+    public var id: String // Unique identifier 
+    public var name: String
+    public var email: String
+    public var profileImage: String? // URL or asset name for profile image
+    public var isClaimed: Bool = true // Whether this participant has been claimed by a real user
+    public var claimedByUserId: String? // ID of the user who claimed this participant (if any)
+    
+    public init(id: String, name: String, email: String, profileImage: String? = nil, isClaimed: Bool = true, claimedByUserId: String? = nil) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.profileImage = profileImage
+        self.isClaimed = isClaimed
+        self.claimedByUserId = claimedByUserId
+    }
     
     // For creating a new user (a claimed user - real app user)
-    static func create(name: String, email: String) -> User {
-        // Try to get Firebase ID if available
-        if let firebaseUserId = FirebaseService.shared.getCurrentUserId() {
-            print("Creating user with Firebase ID: \(firebaseUserId)")
-            return User(id: firebaseUserId, name: name, email: email, profileImage: nil, isClaimed: true)
-        } else {
-            // Fall back to UUID if no Firebase ID is available
-            let uuid = UUID().uuidString
-            print("Creating user with UUID: \(uuid) (no Firebase ID available)")
-            return User(id: uuid, name: name, email: email, profileImage: nil, isClaimed: true)
-        }
+    public static func create(name: String, email: String, userId: String? = nil) -> User {
+        // Use provided ID or generate UUID
+        let id = userId ?? UUID().uuidString
+        print("Creating user with ID: \(id)")
+        return User(id: id, name: name, email: email, profileImage: nil, isClaimed: true)
     }
     
     // For creating a placeholder participant that can be claimed later
-    static func createUnclaimed(name: String, email: String = "") -> User {
+    public static func createUnclaimed(name: String, email: String = "", authUserId: String? = nil) -> User {
         // Generate a special ID format that links this unclaimed user to the authenticated user
         // This helps with Firestore permissions
-        let id = FirebaseService.shared.generateUnclaimedParticipantId(name: name)
+        let authId = authUserId ?? "no_auth"
+        let randomPart = UUID().uuidString.prefix(8)
+        let sanitizedName = name.lowercased().replacingOccurrences(of: " ", with: "_")
+        let id = "unclaimed_\(authId)_\(randomPart)_\(sanitizedName)"
         return User(id: id, name: name, email: email, profileImage: nil, isClaimed: false)
     }
     
     // Hashable conformance
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
 
 // MARK: - Trip Model
-struct Trip: Identifiable, Codable {
-    let id: String
-    var name: String
-    var description: String
-    var startDate: Date?
-    var endDate: Date?
-    var participants: [User]
-    var expenses: [Expense]
-    var inviteCode: String // Shareable code for inviting others
-    var baseCurrencyCode: String // Base currency for balance calculations
+public struct Trip: Identifiable, Codable {
+    public let id: String
+    public var name: String
+    public var description: String
+    public var startDate: Date?
+    public var endDate: Date?
+    public var participants: [User]
+    public var expenses: [Expense]
+    public var inviteCode: String // Shareable code for inviting others
+    public var baseCurrencyCode: String // Base currency for balance calculations
+    
+    public init(id: String, name: String, description: String, startDate: Date? = nil, endDate: Date? = nil, participants: [User], expenses: [Expense], inviteCode: String, baseCurrencyCode: String) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.startDate = startDate
+        self.endDate = endDate
+        self.participants = participants
+        self.expenses = expenses
+        self.inviteCode = inviteCode
+        self.baseCurrencyCode = baseCurrencyCode
+    }
     
     // For creating a new trip
-    static func create(name: String, description: String, creator: User) -> Trip {
+    public static func create(name: String, description: String, creator: User) -> Trip {
         return Trip(
             id: UUID().uuidString,
             name: name,
@@ -72,7 +90,7 @@ struct Trip: Identifiable, Codable {
     }
     
     // Computed property for base currency symbol
-    var baseCurrencySymbol: String {
+    public var baseCurrencySymbol: String {
         let symbols = [
             "USD": "$",
             "EUR": "€",
@@ -95,7 +113,7 @@ struct Trip: Identifiable, Codable {
     }
     
     // Calculate what each person owes to each other
-    func calculateDebts() -> [Debt] {
+    public func calculateDebts(currencyConverter: ((Double, String, String) -> Double)? = nil) -> [Debt] {
         var balances: [String: Double] = [:] // User ID to their balance
         var debts: [Debt] = []
         
@@ -109,11 +127,13 @@ struct Trip: Identifiable, Codable {
             let expenseCurrency = expense.currencyCode ?? "USD"
             
             // Convert expense amount to base currency
-            let convertedAmount = CurrencyConverterService.shared.convert(
-                amount: expense.amount,
-                from: expenseCurrency,
-                to: baseCurrencyCode
-            )
+            let convertedAmount: Double
+            if let converter = currencyConverter {
+                convertedAmount = converter(expense.amount, expenseCurrency, baseCurrencyCode)
+            } else {
+                // Fallback - assume same currency or no conversion needed
+                convertedAmount = expense.amount
+            }
             
             // Add the amount to the payer
             balances[expense.paidBy.id, default: 0] += convertedAmount
@@ -121,11 +141,13 @@ struct Trip: Identifiable, Codable {
             // Subtract the amount from each participant based on their share
             for share in expense.shares {
                 // Convert share amount to base currency
-                let convertedShareAmount = CurrencyConverterService.shared.convert(
-                    amount: share.amount,
-                    from: expenseCurrency,
-                    to: baseCurrencyCode
-                )
+                let convertedShareAmount: Double
+                if let converter = currencyConverter {
+                    convertedShareAmount = converter(share.amount, expenseCurrency, baseCurrencyCode)
+                } else {
+                    // Fallback - assume same currency or no conversion needed
+                    convertedShareAmount = share.amount
+                }
                 balances[share.user.id, default: 0] -= convertedShareAmount
             }
         }
@@ -171,19 +193,31 @@ struct Trip: Identifiable, Codable {
 }
 
 // MARK: - Expense Model
-struct Expense: Identifiable, Codable {
-    let id: String
-    var title: String
-    var description: String
-    var amount: Double
-    var date: Date
-    var category: ExpenseCategory
-    var paidBy: User
-    var shares: [ExpenseShare]
-    var currencyCode: String?
+public struct Expense: Identifiable, Codable {
+    public let id: String
+    public var title: String
+    public var description: String
+    public var amount: Double
+    public var date: Date
+    public var category: ExpenseCategory
+    public var paidBy: User
+    public var shares: [ExpenseShare]
+    public var currencyCode: String?
+    
+    public init(id: String, title: String, description: String, amount: Double, date: Date, category: ExpenseCategory, paidBy: User, shares: [ExpenseShare], currencyCode: String? = nil) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.amount = amount
+        self.date = date
+        self.category = category
+        self.paidBy = paidBy
+        self.shares = shares
+        self.currencyCode = currencyCode
+    }
     
     // Computed property for currency symbol
-    var currencySymbol: String {
+    public var currencySymbol: String {
         let symbols = [
             "USD": "$",
             "EUR": "€",
@@ -208,7 +242,7 @@ struct Expense: Identifiable, Codable {
     }
     
     // For creating a new expense with equal splits
-    static func createEqual(title: String, amount: Double, paidBy: User, participants: [User], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
+    public static func createEqual(title: String, amount: Double, paidBy: User, participants: [User], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
         
         let equalAmount = amount / Double(participants.count)
         let shares = participants.map { user in
@@ -229,7 +263,7 @@ struct Expense: Identifiable, Codable {
     }
     
     // For creating a custom split expense
-    static func createCustom(title: String, amount: Double, paidBy: User, shares: [ExpenseShare], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
+    public static func createCustom(title: String, amount: Double, paidBy: User, shares: [ExpenseShare], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
         
         return Expense(
             id: UUID().uuidString,
@@ -246,12 +280,18 @@ struct Expense: Identifiable, Codable {
 }
 
 // MARK: - Expense Share Model
-struct ExpenseShare: Codable, Equatable {
-    var user: User
-    var amount: Double
-    var percentage: Double
+public struct ExpenseShare: Codable, Equatable {
+    public var user: User
+    public var amount: Double
+    public var percentage: Double
     
-    static func == (lhs: ExpenseShare, rhs: ExpenseShare) -> Bool {
+    public init(user: User, amount: Double, percentage: Double) {
+        self.user = user
+        self.amount = amount
+        self.percentage = percentage
+    }
+    
+    public static func == (lhs: ExpenseShare, rhs: ExpenseShare) -> Bool {
         return lhs.user.id == rhs.user.id && 
                lhs.amount == rhs.amount &&
                lhs.percentage == rhs.percentage
@@ -259,15 +299,21 @@ struct ExpenseShare: Codable, Equatable {
 }
 
 // MARK: - Debt Model
-struct Debt: Identifiable {
-    var id: String { UUID().uuidString }
-    var from: User
-    var to: User
-    var amount: Double
+public struct Debt: Identifiable {
+    public var id: String { UUID().uuidString }
+    public var from: User
+    public var to: User
+    public var amount: Double
+    
+    public init(from: User, to: User, amount: Double) {
+        self.from = from
+        self.to = to
+        self.amount = amount
+    }
 }
 
 // MARK: - Expense Categories
-enum ExpenseCategory: String, Codable, CaseIterable, Identifiable {
+public enum ExpenseCategory: String, Codable, CaseIterable, Identifiable {
     case food = "Food"
     case transportation = "Transportation"
     case accommodation = "Accommodation"
@@ -275,9 +321,9 @@ enum ExpenseCategory: String, Codable, CaseIterable, Identifiable {
     case shopping = "Shopping"
     case other = "Other"
     
-    var id: String { self.rawValue }
+    public var id: String { self.rawValue }
     
-    var icon: String {
+    public var icon: String {
         switch self {
         case .food: return "fork.knife"
         case .transportation: return "car.fill"

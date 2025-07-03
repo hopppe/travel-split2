@@ -8,6 +8,8 @@
 import Foundation
 import SwiftUI
 import Combine
+import TravelSplitModels
+import TravelSplitServices
 
 // Manages expense-related operations for trips
 class TripExpenseManager {
@@ -21,7 +23,7 @@ class TripExpenseManager {
     
     // MARK: - Expense Management
     
-    func addExpense(title: String, amount: Double, paidBy: User, splitType: SplitType, 
+    func addExpense(title: String, amount: Double, paidBy: TravelSplitModels.User, splitType: SplitType, 
                     customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
                     currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
@@ -86,7 +88,7 @@ class TripExpenseManager {
         }
     }
     
-    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, 
+    func updateExpense(id: String, title: String, amount: Double, paidBy: TravelSplitModels.User, splitType: SplitType, 
                       customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
                       currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
@@ -164,7 +166,7 @@ class TripExpenseManager {
     }
     
     // Add a payment between two participants
-    func addPayment(title: String, amount: Double, paidBy: User, paidTo: User, currencyCode: String = "USD") {
+    func addPayment(title: String, amount: Double, paidBy: TravelSplitModels.User, paidTo: TravelSplitModels.User, currencyCode: String = "USD") {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
@@ -188,7 +190,7 @@ class TripExpenseManager {
             description: "Payment", // This is a special marker we'll use to identify payments
             amount: amount,
             date: Date(),
-            category: .other, // Could create a dedicated payment category if desired
+            category: ExpenseCategory.other, // Could create a dedicated payment category if desired
             paidBy: validPaidBy,
             shares: [share],
             currencyCode: currencyCode

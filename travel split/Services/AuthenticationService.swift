@@ -2,11 +2,12 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
+import TravelSplitModels
 
 class AuthenticationService: ObservableObject {
     static let shared = AuthenticationService()
     
-    @Published var currentUser: User?
+    @Published var currentUser: TravelSplitModels.User?
     @Published var isAuthenticated = false
     @Published var errorMessage: String?
     
@@ -58,10 +59,10 @@ class AuthenticationService: ObservableObject {
                 }
                 
                 // Create our internal user model
-                self.currentUser = User(id: user.uid, 
+                self.currentUser = TravelSplitModels.User(id: user.uid, 
                                       name: displayName,
                                       email: user.email ?? "",
-                                      profileImage: nil,
+                                      profileImage: nil as String?,
                                       isClaimed: true)
                 
                 // Save to UserDefaults for persistence
@@ -132,7 +133,7 @@ class AuthenticationService: ObservableObject {
                     
                     // Mark as authenticated immediately
                     self.isAuthenticated = true
-                    self.currentUser = User(id: user.uid, name: name, email: email, profileImage: nil, isClaimed: true)
+                    self.currentUser = TravelSplitModels.User(id: user.uid, name: name, email: email, profileImage: nil as String?, isClaimed: true)
                     
                     // Save the user data to Firestore
                     self.saveUserToFirestore(userId: user.uid, name: name, email: email) { success in
@@ -190,7 +191,7 @@ class AuthenticationService: ObservableObject {
                     
                     // Mark as authenticated immediately
                     self.isAuthenticated = true
-                    self.currentUser = User(id: user.uid, name: name, email: email, profileImage: nil, isClaimed: true)
+                    self.currentUser = TravelSplitModels.User(id: user.uid, name: name, email: email, profileImage: nil as String?, isClaimed: true)
                     
                     // Now save the user data to Firestore
                     self.saveUserToFirestore(userId: user.uid, name: name, email: email) { success in
@@ -286,10 +287,10 @@ class AuthenticationService: ObservableObject {
             
             // Mark as authenticated immediately
             self.isAuthenticated = true
-            self.currentUser = User(id: user.uid, 
+            self.currentUser = TravelSplitModels.User(id: user.uid, 
                                   name: displayName, 
                                   email: user.email ?? "", 
-                                  profileImage: nil,
+                                  profileImage: nil as String?,
                                   isClaimed: true)
             
             // If we had an anonymous user before, transfer their trips to the new signed-in user
@@ -354,7 +355,7 @@ class AuthenticationService: ObservableObject {
         do {
             try Auth.auth().signOut()
             isAuthenticated = false
-            currentUser = nil
+            currentUser = nil as TravelSplitModels.User?
             
             // Post notification that user has signed out
             NotificationCenter.default.post(name: .userDidSignOut, object: nil)
@@ -437,7 +438,7 @@ class AuthenticationService: ObservableObject {
                     
                     // Step 5: Update authentication state
                     self.isAuthenticated = false
-                    self.currentUser = nil
+                    self.currentUser = nil as TravelSplitModels.User?
                     
                     // Post notification that user account was deleted
                     NotificationCenter.default.post(name: .userAccountDeleted, object: nil)
@@ -453,7 +454,7 @@ class AuthenticationService: ObservableObject {
         let db = Firestore.firestore()
         
         // Find all trips where the user is a participant (either directly or through claiming)
-        db.collection("trips").getDocuments { snapshot, error in
+        db.collection("trips").getDocuments(completion: { snapshot, error in
             guard let documents = snapshot?.documents, error == nil else {
                 print("Error fetching trips for account deletion: \(error?.localizedDescription ?? "Unknown error")")
                 completion(false)
@@ -465,7 +466,7 @@ class AuthenticationService: ObservableObject {
             
             for document in documents {
                 do {
-                    let trip = try document.data(as: Trip.self)
+                    let trip = try document.data(as: TravelSplitModels.Trip.self)
                     var updatedTrip = trip
                     var tripNeedsUpdate = false
                     
@@ -560,7 +561,7 @@ class AuthenticationService: ObservableObject {
                 print("No trips needed updating for account deletion")
                 completion(true)
             }
-        }
+        })
     }
     
     /// Delete user data from Firestore users collection

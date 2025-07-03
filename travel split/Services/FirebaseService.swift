@@ -8,6 +8,7 @@ import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth  // Add Firebase Auth import
+import TravelSplitModels
 
 // MARK: - Firebase Service
 class FirebaseService {
@@ -112,7 +113,7 @@ class FirebaseService {
     // MARK: - Firestore Integration
     
     // Save a trip to Firestore
-    func saveTrip(_ trip: Trip, completion: @escaping (Bool, Error?) -> Void) {
+    func saveTrip(_ trip: TravelSplitModels.Trip, completion: @escaping (Bool, Error?) -> Void) {
         print("Starting to save trip to Firestore: \(trip.id)")
         // Real Firestore implementation
         let db = Firestore.firestore()
@@ -152,7 +153,7 @@ class FirebaseService {
     }
     
     // Fetch all trips where the user is a participant
-    func fetchTripsForUser(userId: String, completion: @escaping ([Trip]?, Error?) -> Void) {
+    func fetchTripsForUser(userId: String, completion: @escaping ([TravelSplitModels.Trip]?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trips")
@@ -172,7 +173,7 @@ class FirebaseService {
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching trips: \(error.localizedDescription)")
-                    completion(nil, error)
+                    completion(nil as [TravelSplitModels.Trip]?, error)
                     return
                 }
                 
@@ -182,11 +183,11 @@ class FirebaseService {
                     return
                 }
                 
-                var trips: [Trip] = []
+                var trips: [TravelSplitModels.Trip] = []
                 
                 for document in documents {
                     do {
-                        let trip = try document.data(as: Trip.self)
+                        let trip = try document.data(as: TravelSplitModels.Trip.self)
                         
                         // Check if the user is a participant in this trip
                         let isParticipant = trip.participants.contains { participant in
@@ -216,12 +217,12 @@ class FirebaseService {
     }
     
     // Fetch a trip from Firestore by invite code
-    func fetchTrip(withInviteCode code: String, completion: @escaping (Trip?, Error?) -> Void) {
+    func fetchTrip(withInviteCode code: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trip by invite code")
             // Return error - don't automatically create anonymous user
-            completion(nil, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required to fetch trip by invite code"]))
+            completion(nil as TravelSplitModels.Trip?, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required to fetch trip by invite code"]))
             return
         }
         
@@ -234,7 +235,7 @@ class FirebaseService {
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("Error fetching trip: \(error.localizedDescription)")
-                    completion(nil, error)
+                    completion(nil as TravelSplitModels.Trip?, error)
                     return
                 }
                 
@@ -244,22 +245,22 @@ class FirebaseService {
                 }
                 
                 do {
-                    let trip = try document.data(as: Trip.self)
+                    let trip = try document.data(as: TravelSplitModels.Trip.self)
                     completion(trip, nil)
                 } catch {
                     print("Error decoding trip: \(error.localizedDescription)")
-                    completion(nil, error)
+                    completion(nil as TravelSplitModels.Trip?, error)
                 }
             }
     }
     
     // Fetch a trip from Firestore by ID
-    func fetchTrip(withId id: String, completion: @escaping (Trip?, Error?) -> Void) {
+    func fetchTrip(withId id: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trip by ID")
             // Return error - don't automatically create anonymous user
-            completion(nil, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required to fetch trip by ID"]))
+            completion(nil as TravelSplitModels.Trip?, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required to fetch trip by ID"]))
             return
         }
         
@@ -269,7 +270,7 @@ class FirebaseService {
         db.collection("trips").document(id).getDocument { documentSnapshot, error in
             if let error = error {
                 print("Error fetching trip: \(error.localizedDescription)")
-                completion(nil, error)
+                completion(nil as TravelSplitModels.Trip?, error)
                 return
             }
             
@@ -279,21 +280,21 @@ class FirebaseService {
             }
             
             do {
-                let trip = try document.data(as: Trip.self)
+                let trip = try document.data(as: TravelSplitModels.Trip.self)
                 completion(trip, nil)
             } catch {
                 print("Error decoding trip: \(error.localizedDescription)")
-                completion(nil, error)
+                completion(nil as TravelSplitModels.Trip?, error)
             }
         }
     }
     
     // Listen for real-time updates to a trip
-    func listenForTripUpdates(tripId: String, completion: @escaping (Trip?, Error?) -> Void) -> Any? {
+    func listenForTripUpdates(tripId: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) -> Any? {
         // Check if user is authenticated before listening
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for listening to trip updates")
-            completion(nil, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required for real-time updates"]))
+            completion(nil as TravelSplitModels.Trip?, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required for real-time updates"]))
             return nil
         }
         
@@ -304,7 +305,7 @@ class FirebaseService {
             .addSnapshotListener { documentSnapshot, error in
                 guard let document = documentSnapshot else {
                     print("Error fetching document: \(error?.localizedDescription ?? "Unknown error")")
-                    completion(nil, error)
+                    completion(nil as TravelSplitModels.Trip?, error)
                     return
                 }
                 
@@ -314,11 +315,11 @@ class FirebaseService {
                 }
                 
                 do {
-                    let trip = try document.data(as: Trip.self)
+                    let trip = try document.data(as: TravelSplitModels.Trip.self)
                     completion(trip, nil)
                 } catch {
                     print("Error decoding trip: \(error.localizedDescription)")
-                    completion(nil, error)
+                    completion(nil as TravelSplitModels.Trip?, error)
                 }
             }
             
@@ -367,7 +368,7 @@ class FirebaseService {
         let sanitizedName = name
             .lowercased()
             .replacingOccurrences(of: " ", with: "_")
-            .replacingOccurrences(of: "[^a-z0-9_]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "[^a-z0-9_]", with: "", options: String.CompareOptions.regularExpression)
         
         return "unclaimed_\(authUserId)_\(randomPart)_\(sanitizedName)"
     }

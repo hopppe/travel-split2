@@ -8,6 +8,8 @@
 import Foundation
 import Combine
 import FirebaseAuth
+import TravelSplitModels
+import TravelSplitServices
 
 // Manages participant-related operations for trips
 class TripParticipantManager {
@@ -41,7 +43,7 @@ class TripParticipantManager {
     }
     
     // Add a participant to the current trip
-    func addParticipant(_ user: User) {
+    func addParticipant(_ user: TravelSplitModels.User) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
@@ -111,7 +113,7 @@ class TripParticipantManager {
     }
     
     // Remove a participant from the current trip
-    func removeParticipant(_ participant: User) -> Bool {
+    func removeParticipant(_ participant: TravelSplitModels.User) -> Bool {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return false
@@ -138,7 +140,7 @@ class TripParticipantManager {
     }
     
     // Helper method to check if a participant's balance is zero
-    private func isParticipantBalanceZero(_ participant: User, in trip: Trip) -> Bool {
+    private func isParticipantBalanceZero(_ participant: TravelSplitModels.User, in trip: Trip) -> Bool {
         // Calculate what this participant has paid and what they owe
         var balance: Double = 0
         
@@ -184,7 +186,7 @@ class TripParticipantManager {
         }
         
         // Create unclaimed participant with the current authenticated user as the creator
-        let unclaimedParticipant = User.createUnclaimed(name: name, email: email)
+        let unclaimedParticipant = TravelSplitModels.User.createUnclaimed(name: name, email: email)
         print("Creating unclaimed participant: \(name) with ID: \(unclaimedParticipant.id)")
         
         // Add to trip
@@ -195,7 +197,7 @@ class TripParticipantManager {
     }
     
     // Claim a participant in the current trip
-    func claimParticipant(_ participant: User) {
+    func claimParticipant(_ participant: TravelSplitModels.User) {
         print("Claiming participant: \(participant.name) in trip")
         
         guard var trip = tripViewModel.currentTrip else {
@@ -249,7 +251,7 @@ class TripParticipantManager {
     }
     
     // Find the current user's participant in the trip (handles both direct and claimed participants)
-    func findCurrentUserInTrip() -> User? {
+    func findCurrentUserInTrip() -> TravelSplitModels.User? {
         guard let trip = tripViewModel.currentTrip else {
             return nil
         }
@@ -268,7 +270,7 @@ class TripParticipantManager {
     }
     
     // Get a list of unclaimed participants in a trip
-    func getUnclaimedParticipants(in trip: Trip) -> [User] {
+    func getUnclaimedParticipants(in trip: Trip) -> [TravelSplitModels.User] {
         let currentUser = tripViewModel.currentUser
         
         // Return all participants that are not claimed and either:
@@ -282,8 +284,8 @@ class TripParticipantManager {
     }
     
     // Get previous participants from all trips
-    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [User] {
-        var allParticipants: [User] = []
+    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [TravelSplitModels.User] {
+        var allParticipants: [TravelSplitModels.User] = []
         var uniqueParticipantIds = Set<String>()
         let currentUser = tripViewModel.currentUser
         
@@ -328,7 +330,7 @@ class TripParticipantManager {
     }
     
     // Helper for participant claiming UI
-    func prepareAndShowParticipantClaimView(with participants: [User], forTrip trip: Trip) {
+    func prepareAndShowParticipantClaimView(with participants: [TravelSplitModels.User], forTrip trip: Trip) {
         print("Preparing to show participant claim view with \(participants.count) participants")
         
         // Add trip to local trips array if not already there

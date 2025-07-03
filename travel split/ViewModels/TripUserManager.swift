@@ -8,6 +8,8 @@
 import Foundation
 import FirebaseAuth
 import Combine
+import TravelSplitModels
+import TravelSplitServices
 
 // Manages user authentication and user-related operations
 class TripUserManager {
@@ -22,7 +24,7 @@ class TripUserManager {
     // MARK: - User Management
     
     // Update the current user and propagate changes to trips
-    func updateUser(_ user: User) {
+    func updateUser(_ user: TravelSplitModels.User) {
         // Update current user in the view model
         tripViewModel.currentUser = user
         
@@ -61,7 +63,7 @@ class TripUserManager {
     }
     
     // Static method to load or create a user
-    static func loadOrCreateUser() -> User {
+    static func loadOrCreateUser() -> TravelSplitModels.User {
         // Try to get the Firebase user ID first as the source of truth
         if let firebaseUser = Auth.auth().currentUser {
             let userId = firebaseUser.uid
@@ -99,7 +101,7 @@ class TripUserManager {
             let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
             
             // Create a user with the Firebase ID
-            return User(id: userId, name: userName, email: userEmail, profileImage: nil, isClaimed: true)
+            return TravelSplitModels.User(id: userId, name: userName, email: userEmail, profileImage: nil, isClaimed: true)
         }
         
         // If no Firebase user exists, get the stored user or create a temporary local one
@@ -112,7 +114,7 @@ class TripUserManager {
             let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
             
             // Create a temporary user with the saved ID
-            return User(id: savedUserId, name: userName, email: userEmail, profileImage: nil, isClaimed: true)
+            return TravelSplitModels.User(id: savedUserId, name: userName, email: userEmail, profileImage: nil, isClaimed: true)
         }
         
         // Create a temporary user with a new UUID - but don't authenticate
@@ -121,7 +123,7 @@ class TripUserManager {
         UserDefaults.standard.set("user", forKey: "user_name")
         
         // Return a local placeholder user without Firebase authentication
-        return User(id: tempId, name: "user", email: "", profileImage: nil, isClaimed: true)
+        return TravelSplitModels.User(id: tempId, name: "user", email: "", profileImage: nil, isClaimed: true)
     }
     
     // Helper function for signing in anonymously if needed

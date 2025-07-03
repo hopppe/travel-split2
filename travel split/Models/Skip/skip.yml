@@ -1,0 +1,5 @@
+dependencies:
+  - SkipFoundation
+
+# Basic configuration for Models
+# No platform-specific overrides needed yet 

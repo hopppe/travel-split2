@@ -8,6 +8,8 @@
 import Foundation
 import FirebaseAuth
 import Combine
+import TravelSplitModels
+import TravelSplitServices
 
 // Manages joining and sharing trips
 class TripJoinService {

@@ -9,6 +9,8 @@ import Foundation
 import SwiftUI
 import Combine
 import FirebaseAuth
+import TravelSplitModels
+import TravelSplitServices
 
 // Main ViewModel to handle Trip operations 
 // Acts as a coordinator for the specialized components
@@ -16,12 +18,12 @@ class TripViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var trips: [Trip] = []
     @Published var currentTrip: Trip?
-    @Published var currentUser: User
+    @Published var currentUser: TravelSplitModels.User
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
     // New states for participant claiming
-    @Published var potentialClaimableParticipants: [User] = []
+    @Published var potentialClaimableParticipants: [TravelSplitModels.User] = []
     @Published var showParticipantClaimingView = false
     
     // New property to track trips that need to be synced
@@ -45,7 +47,7 @@ class TripViewModel: ObservableObject {
     }()
     
     // Initialize with the current user
-    init(currentUser: User, trips: [Trip] = []) {
+    init(currentUser: TravelSplitModels.User, trips: [Trip] = []) {
         self.currentUser = currentUser
         self.trips = trips
         
@@ -228,13 +230,13 @@ class TripViewModel: ObservableObject {
     }
     
     // Create a new trip and save to Firestore
-    func createNewTrip(name: String, description: String, initialParticipants: [User] = []) {
+    func createNewTrip(name: String, description: String, initialParticipants: [TravelSplitModels.User] = []) {
         isLoading = true
         
         // Ensure user ID consistency before creating trip
         userManager.ensureUserIdConsistency()
         
-        var newTrip = Trip.create(
+        var newTrip = TravelSplitModels.Trip.create(
             name: name,
             description: description,
             creator: currentUser
@@ -482,11 +484,11 @@ class TripViewModel: ObservableObject {
     
     // MARK: - Expense Management Delegation
     
-    func addExpenseToCurrentTrip(title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
+    func addExpenseToCurrentTrip(title: String, amount: Double, paidBy: TravelSplitModels.User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
         expenseManager.addExpense(title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode, date: date)
     }
     
-    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
+    func updateExpense(id: String, title: String, amount: Double, paidBy: TravelSplitModels.User, splitType: SplitType, customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, currencyCode: String = "USD", date: Date = Date()) {
         expenseManager.updateExpense(id: id, title: title, amount: amount, paidBy: paidBy, splitType: splitType, customShares: customShares, category: category, currencyCode: currencyCode, date: date)
     }
     
@@ -494,7 +496,7 @@ class TripViewModel: ObservableObject {
         expenseManager.deleteExpense(withId: id)
     }
     
-    func addPaymentToCurrentTrip(title: String, amount: Double, paidBy: User, paidTo: User, currencyCode: String = "USD") {
+    func addPaymentToCurrentTrip(title: String, amount: Double, paidBy: TravelSplitModels.User, paidTo: TravelSplitModels.User, currencyCode: String = "USD") {
         expenseManager.addPayment(title: title, amount: amount, paidBy: paidBy, paidTo: paidTo, currencyCode: currencyCode)
     }
     
@@ -504,7 +506,7 @@ class TripViewModel: ObservableObject {
         participantManager.addCurrentUserToTrip(trip)
     }
     
-    func addParticipantToCurrentTrip(_ user: User) {
+    func addParticipantToCurrentTrip(_ user: TravelSplitModels.User) {
         participantManager.addParticipant(user)
     }
     
@@ -512,11 +514,11 @@ class TripViewModel: ObservableObject {
         participantManager.addUnclaimedParticipant(name: name, email: email)
     }
     
-    func removeParticipantFromCurrentTrip(_ participant: User) -> Bool {
+    func removeParticipantFromCurrentTrip(_ participant: TravelSplitModels.User) -> Bool {
         return participantManager.removeParticipant(participant)
     }
     
-    func canRemoveParticipant(_ participant: User) -> Bool {
+    func canRemoveParticipant(_ participant: TravelSplitModels.User) -> Bool {
         // Can't remove self
         if participant.id == currentUser.id || participant.claimedByUserId == currentUser.id {
             return false
@@ -531,19 +533,19 @@ class TripViewModel: ObservableObject {
         return balanceCalculator.isParticipantBalanceZero(participant, in: trip)
     }
     
-    func claimParticipant(_ participant: User) {
+    func claimParticipant(_ participant: TravelSplitModels.User) {
         participantManager.claimParticipant(participant)
     }
     
-    func findCurrentUserInTrip() -> User? {
+    func findCurrentUserInTrip() -> TravelSplitModels.User? {
         return participantManager.findCurrentUserInTrip()
     }
     
-    func getUnclaimedParticipants(in trip: Trip) -> [User] {
+    func getUnclaimedParticipants(in trip: Trip) -> [TravelSplitModels.User] {
         return participantManager.getUnclaimedParticipants(in: trip)
     }
     
-    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [User] {
+    func getPreviousParticipants(excludingParticipantsFrom trip: Trip? = nil) -> [TravelSplitModels.User] {
         return participantManager.getPreviousParticipants(excludingParticipantsFrom: trip)
     }
     
@@ -590,7 +592,7 @@ class TripViewModel: ObservableObject {
     
     // MARK: - User Management
     
-    func updateCurrentUser(_ user: User) {
+    func updateCurrentUser(_ user: TravelSplitModels.User) {
         currentUser = user
     }
     
@@ -622,13 +624,13 @@ class TripViewModel: ObservableObject {
         showParticipantClaimingView = false
         
         // Create a minimal placeholder user
-        currentUser = User(id: UUID().uuidString, name: "user", email: "", profileImage: nil, isClaimed: true)
+        currentUser = TravelSplitModels.User(id: UUID().uuidString, name: "user", email: "", profileImage: nil, isClaimed: true)
         
         // Force show welcome screen by setting hasCompletedSetup to false
         UserDefaults.standard.set(false, forKey: "hasCompletedSetup")
     }
     
-    static func loadOrCreateUser() -> User {
+    static func loadOrCreateUser() -> TravelSplitModels.User {
         return TripUserManager.loadOrCreateUser()
     }
     
