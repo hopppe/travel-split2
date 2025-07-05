@@ -7,6 +7,13 @@
 
 import SwiftUI
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
+#if !SKIP
+import UIKit
+#endif
 
 // MARK: - Record Payment Sheet
 struct RecordPaymentSheet: View {
@@ -46,7 +53,9 @@ struct RecordPaymentSheet: View {
                     .accessibilityLabel("select_currency".localized)
                     
                     TextField("amount".localized, text: $paymentAmount)
-                        .keyboardType(.decimalPad)
+#if !SKIP
+                        .keyboardType(UIKeyboardType.decimalPad)
+#endif
                         .safeRTLTextField()
                         .accessibilityLabel("payment_amount".localized)
                 }
@@ -114,7 +123,9 @@ struct RecordPaymentSheet: View {
                 }
                 .padding(.vertical, 4)
             }
+            #if !SKIP
             .listRowInsets(EdgeInsets())
+            #endif
         }
         .navigationTitle("record_payment_title".localized)
         .navigationBarTitleDisplayMode(.inline)

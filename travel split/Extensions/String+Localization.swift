@@ -7,16 +7,17 @@
 
 import Foundation
 import SwiftUI
+import TravelSplitServices
 
 // MARK: - String Extension for Basic Localization
 extension String {
     /// Returns the localized string for the current key using our custom LanguageManager
-    var localized: String {
+    public var localized: String {
         return LanguageManager.shared.getLocalizedString(for: self)
     }
     
     /// Returns the localized string with arguments using our custom LanguageManager
-    func localized(with arguments: CVarArg...) -> String {
+    public func localized(with arguments: CVarArg...) -> String {
         let format = LanguageManager.shared.getLocalizedString(for: self)
         return String(format: format, arguments: arguments)
     }
@@ -67,20 +68,8 @@ struct LocalizedText: View {
 }
 
 // MARK: - Text Extension for Convenience
-extension Text {
-    /// Creates a Text view with localized string that automatically updates when language changes
-    init(localized key: String) {
-        let localizedString = LanguageManager.shared.getLocalizedString(for: key)
-        self.init(localizedString)
-    }
-    
-    /// Creates a Text view with localized string and arguments that automatically updates when language changes
-    init(localized key: String, arguments: CVarArg...) {
-        let format = LanguageManager.shared.getLocalizedString(for: key)
-        let localizedString = String(format: format, arguments: arguments)
-        self.init(localizedString)
-    }
-}
+// Skip: Extensions with constructors are not supported for external types
+// Using LocalizedText view instead
 
 // MARK: - View Modifier for Language-Aware Views
 struct LanguageAwareModifier: ViewModifier {
@@ -201,12 +190,12 @@ extension View {
     }
     
     /// Apply stable language-aware modifications for sheets (prevents dismissal)
-    func stableLocalized() -> some View {
+    public func stableLocalized() -> some View {
         self.modifier(StableLanguageAwareModifier())
     }
     
     /// Apply RTL-aware text alignment
-    func rtlAwareAlignment(_ alignment: TextAlignment? = nil) -> some View {
+    public func rtlAwareAlignment(_ alignment: TextAlignment? = nil) -> some View {
         self.modifier(RTLAwareTextModifier(alignment: alignment))
     }
     
@@ -216,12 +205,12 @@ extension View {
     }
     
     /// Get the appropriate horizontal alignment for current language
-    var languageAwareHorizontalAlignment: HorizontalAlignment {
+    public var languageAwareHorizontalAlignment: HorizontalAlignment {
         LanguageManager.shared.isRTL ? .trailing : .leading
     }
     
     /// Apply comprehensive RTL layout support
-    func forceRTL() -> some View {
+    public func forceRTL() -> some View {
         self.modifier(ForceRTLModifier())
     }
     
@@ -231,12 +220,12 @@ extension View {
     }
     
     /// Apply RTL support for HStack layouts
-    func rtlHStack() -> some View {
+    public func rtlHStack() -> some View {
         self.modifier(RTLHStackModifier())
     }
     
     /// Apply safe RTL support for text fields (preserves text direction)
-    func safeRTLTextField() -> some View {
+    public func safeRTLTextField() -> some View {
         self.modifier(SafeRTLTextFieldModifier())
     }
 } 

@@ -4,12 +4,12 @@ import FirebaseFirestore
 import SwiftUI
 import TravelSplitModels
 
-class AuthenticationService: ObservableObject {
-    static let shared = AuthenticationService()
+public class AuthenticationService: ObservableObject {
+    public static let shared = AuthenticationService()
     
-    @Published var currentUser: TravelSplitModels.User?
-    @Published var isAuthenticated = false
-    @Published var errorMessage: String?
+    @Published public var currentUser: TravelSplitModels.User?
+    @Published public var isAuthenticated = false
+    @Published public var errorMessage: String?
     
     private var authStateListener: AuthStateDidChangeListenerHandle?
     
@@ -85,7 +85,7 @@ class AuthenticationService: ObservableObject {
     }
     
     // Sign up with email and password
-    func signUp(email: String, password: String, name: String, completion: @escaping (Bool, Error?) -> Void) {
+    public func signUp(email: String, password: String, name: String, completion: @escaping (Bool, Error?) -> Void) {
         // Check if we have an anonymous user that we should upgrade
         if let currentUser = Auth.auth().currentUser, currentUser.isAnonymous {
             print("Converting anonymous user to permanent account")
@@ -229,7 +229,7 @@ class AuthenticationService: ObservableObject {
     }
     
     // Sign in with email and password
-    func signIn(email: String, password: String, completion: @escaping (Bool, Error?) -> Void) {
+    public func signIn(email: String, password: String, completion: @escaping (Bool, Error?) -> Void) {
         // Store reference to anonymous user if one exists
         let anonymousUser = Auth.auth().currentUser
         let isAnonymous = anonymousUser?.isAnonymous ?? false
@@ -351,7 +351,7 @@ class AuthenticationService: ObservableObject {
     }
     
     // Sign out
-    func signOut() {
+    public func signOut() {
         do {
             try Auth.auth().signOut()
             isAuthenticated = false

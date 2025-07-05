@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Main Balance View
 
@@ -102,8 +106,10 @@ struct SettledUpView: View {
             .accessibilityLabel("record_a_payment".localized)
         }
         .padding()
+#if !SKIP
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\("all_settled_up".localized). \("everyone_paid_fair_share".localized).")
+#endif
         .sheet(isPresented: $showingRecordPaymentSheet) {
             NavigationStack {
                 RecordPaymentSheet(viewModel: viewModel)
@@ -152,8 +158,10 @@ struct NoExpensesView: View {
             .accessibilityLabel("record_a_payment".localized)
         }
         .padding()
+#if !SKIP
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\("no_expenses_to_calculate".localized). \("add_expenses_to_see_debts".localized).")
+#endif
         .sheet(isPresented: $showingRecordPaymentSheet) {
             NavigationStack {
                 RecordPaymentSheet(viewModel: viewModel)
@@ -330,14 +338,18 @@ struct UserBalanceRow: View {
                 .foregroundColor(balanceColor)
         }
         .padding(.vertical, 4)
+#if !SKIP
         .contentShape(Rectangle()) // Make entire row tappable
+#endif
         .onTapGesture {
             // Get the first user debt if there is one, otherwise don't show the sheet
             if getFirstUserDebt() != nil {
                 showBreakdown = true
             }
         }
+#if !SKIP
         .accessibilityElement(children: .combine)
+#endif
         .accessibilityLabel("\(isCurrentUser ? "you".localized : user.name) \(balanceDescription) \(formattedBalance)")
         .accessibilityHint("tap_to_see_breakdown".localized)
         .sheet(isPresented: $showBreakdown) {
@@ -457,11 +469,15 @@ struct DebtRowView: View {
                 .foregroundColor(.primary)
         }
         .padding(.vertical, 4)
+#if !SKIP
         .contentShape(Rectangle()) // Make entire row tappable
+#endif
         .onTapGesture {
             showBreakdown = true
         }
+#if !SKIP
         .accessibilityElement(children: .combine)
+#endif
         .accessibilityLabel("\(debt.from.name) \("owes".localized) \(debt.to.name) \(formattedAmount)")
         .accessibilityHint("tap_to_see_debt_breakdown".localized)
         .sheet(isPresented: $showBreakdown) {
@@ -510,8 +526,10 @@ struct SettledDebtRowView: View {
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+#if !SKIP
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+#endif
         .accessibilityLabel("\(participant.name) \("is_settled_up".localized), zero balance")
     }
 }
@@ -546,8 +564,10 @@ struct TotalSummaryView: View {
             }
         }
         .padding(.vertical, 4)
+#if !SKIP
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\("total_trip_cost".localized): \(formattedTotalCost), \("average_per_person".localized): \(formattedAveragePerPerson)")
+#endif
     }
     
     // MARK: - Helper Properties and Methods

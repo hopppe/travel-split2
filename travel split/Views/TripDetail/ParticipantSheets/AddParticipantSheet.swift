@@ -7,6 +7,10 @@
 
 import SwiftUI
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // Local struct for participant entry
 struct AddParticipantEntry: Identifiable {
@@ -56,10 +60,14 @@ struct AddPreviousParticipantView: View {
                     .frame(width: 60)
             }
             .padding(.vertical, 4)
+            #if !SKIP
             .contentShape(Rectangle())
+            #endif
         }
         .buttonStyle(PlainButtonStyle())
+        #if !SKIP
         .accessibilityElement(children: .combine)
+        #endif
         .accessibilityLabel("\(participant.name)\(isSelected ? ", \("selected".localized)" : "")")
         .accessibilityHint(isSelected ? "double_tap_to_remove".localized : "double_tap_to_add".localized)
     }
@@ -105,7 +113,7 @@ struct AddParticipantSheet: View {
                         VStack(spacing: 12) {
                             TextField("name".localized, text: $participants[index].name)
                                 .safeRTLTextField()
-                                .padding(.vertical, 4)
+                                .padding(EdgeInsets.vertical, 4)
                         }
                         .padding(.bottom, 8)
                         .overlay(
@@ -118,7 +126,7 @@ struct AddParticipantSheet: View {
                                         .offset(y: 12)
                                 }
                             }
-                            , alignment: .bottom
+                            , alignment: Alignment.bottom
                         )
                     }
                     

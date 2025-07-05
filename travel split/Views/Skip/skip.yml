@@ -1,0 +1,10 @@
+dependencies:
+  - SkipUI
+  - SkipFoundation
+  - TravelSplitModels
+  - TravelSplitServices
+  - TravelSplitViewModels
+  - TravelSplitExtensions
+
+# Views module configuration
+# This module contains all SwiftUI views and UI components 

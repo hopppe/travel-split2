@@ -9,12 +9,12 @@ import SwiftUI
 import Foundation
 
 /// Manages app language settings, localization, and RTL support
-class LanguageManager: ObservableObject {
+public class LanguageManager: ObservableObject {
     
     // MARK: - Published Properties
     
     /// Current app language
-    @Published var currentLanguage: SupportedLanguage {
+    @Published public var currentLanguage: SupportedLanguage {
         didSet {
             saveLanguagePreference()
             updateLayoutDirection()
@@ -22,17 +22,17 @@ class LanguageManager: ObservableObject {
     }
     
     /// Current layout direction (LTR/RTL)
-    @Published var layoutDirection: LayoutDirection
+    @Published public var layoutDirection: LayoutDirection
     
     // MARK: - Types
     
     /// Supported languages in the app
-    enum SupportedLanguage: String, CaseIterable {
+    public enum SupportedLanguage: String, CaseIterable {
         case english = "en"
         case arabic = "ar"
         
         /// Display name for the language
-        var displayName: String {
+        public var displayName: String {
             switch self {
             case .english:
                 return "English"
@@ -42,7 +42,7 @@ class LanguageManager: ObservableObject {
         }
         
         /// Native display name for the language
-        var nativeDisplayName: String {
+        public var nativeDisplayName: String {
             switch self {
             case .english:
                 return "English"
@@ -52,7 +52,7 @@ class LanguageManager: ObservableObject {
         }
         
         /// Layout direction for the language
-        var layoutDirection: LayoutDirection {
+        public var layoutDirection: LayoutDirection {
             switch self {
             case .english:
                 return .leftToRight
@@ -62,14 +62,14 @@ class LanguageManager: ObservableObject {
         }
         
         /// Locale identifier
-        var locale: Locale {
+        public var locale: Locale {
             return Locale(identifier: self.rawValue)
         }
     }
     
     // MARK: - Singleton
     
-    static let shared = LanguageManager()
+    public static let shared = LanguageManager()
     
     // MARK: - Private Properties
     
@@ -104,7 +104,7 @@ class LanguageManager: ObservableObject {
     
     /// Set the app language
     /// - Parameter language: The language to set
-    func setLanguage(_ language: SupportedLanguage) {
+    public func setLanguage(_ language: SupportedLanguage) {
         print("Setting language to: \(language.rawValue)")
         currentLanguage = language
         
@@ -117,7 +117,7 @@ class LanguageManager: ObservableObject {
     /// Get localized string for a key
     /// - Parameter key: The localization key
     /// - Returns: Localized string
-    func getLocalizedString(for key: String) -> String {
+    public func getLocalizedString(for key: String) -> String {
         guard let path = Bundle.main.path(forResource: currentLanguage.rawValue, ofType: "lproj"),
               let bundle = Bundle(path: path) else {
             print("Warning: Could not find localization bundle for \(currentLanguage.rawValue)")
@@ -142,7 +142,7 @@ class LanguageManager: ObservableObject {
     ///   - key: The localization key
     ///   - formatArguments: Format arguments
     /// - Returns: Formatted localized string
-    func getLocalizedString(for key: String, withFormat formatArguments: [CVarArg]) -> String {
+    public func getLocalizedString(for key: String, withFormat formatArguments: [CVarArg]) -> String {
         let format = getLocalizedString(for: key)
         return String(format: format, arguments: formatArguments)
     }
@@ -152,23 +152,23 @@ class LanguageManager: ObservableObject {
     ///   - key: The localization key
     ///   - argument: Single format argument
     /// - Returns: Formatted localized string
-    func getLocalizedString(for key: String, withArgument argument: CVarArg) -> String {
+    public func getLocalizedString(for key: String, withArgument argument: CVarArg) -> String {
         let format = getLocalizedString(for: key)
         return String(format: format, argument)
     }
     
     /// Check if current language is RTL
-    var isRTL: Bool {
+    public var isRTL: Bool {
         return layoutDirection == .rightToLeft
     }
     
     /// Get current locale
-    var currentLocale: Locale {
+    public var currentLocale: Locale {
         return currentLanguage.locale
     }
     
     /// Reset to system language
-    func resetToSystemLanguage() {
+    public func resetToSystemLanguage() {
         let systemLanguage = Self.detectSystemLanguage()
         setLanguage(systemLanguage)
     }

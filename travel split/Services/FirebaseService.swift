@@ -11,11 +11,11 @@ import FirebaseAuth  // Add Firebase Auth import
 import TravelSplitModels
 
 // MARK: - Firebase Service
-class FirebaseService {
-    static let shared = FirebaseService()
+public class FirebaseService {
+    public static let shared = FirebaseService()
     
     // Add a property to track authentication state
-    @Published var isAuthenticated = false
+    @Published public var isAuthenticated = false
     private var userId: String?
     
     // App bundle identifiers for deep linking
@@ -40,7 +40,7 @@ class FirebaseService {
     // MARK: - Authentication
     
     // Sign in anonymously
-    func signInAnonymously(completion: @escaping (Bool, Error?) -> Void) {
+    public func signInAnonymously(completion: @escaping (Bool, Error?) -> Void) {
         // Check if anonymous auth is allowed, but log the value first for debugging
         let isAnonymousAuthAllowed = UserDefaults.standard.bool(forKey: "allowAnonymousAuth")
         print("Anonymous auth allowed: \(isAnonymousAuthAllowed)")
@@ -101,19 +101,19 @@ class FirebaseService {
     }
     
     // Get current Firebase user ID
-    func getCurrentUserId() -> String? {
+    public func getCurrentUserId() -> String? {
         return Auth.auth().currentUser?.uid
     }
     
     // Get current Firebase user
-    func getCurrentUser() -> FirebaseAuth.User? {
+    public func getCurrentUser() -> FirebaseAuth.User? {
         return Auth.auth().currentUser
     }
     
     // MARK: - Firestore Integration
     
     // Save a trip to Firestore
-    func saveTrip(_ trip: TravelSplitModels.Trip, completion: @escaping (Bool, Error?) -> Void) {
+    public func saveTrip(_ trip: TravelSplitModels.Trip, completion: @escaping (Bool, Error?) -> Void) {
         print("Starting to save trip to Firestore: \(trip.id)")
         // Real Firestore implementation
         let db = Firestore.firestore()
@@ -153,7 +153,7 @@ class FirebaseService {
     }
     
     // Fetch all trips where the user is a participant
-    func fetchTripsForUser(userId: String, completion: @escaping ([TravelSplitModels.Trip]?, Error?) -> Void) {
+    public func fetchTripsForUser(userId: String, completion: @escaping ([TravelSplitModels.Trip]?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trips")
@@ -217,7 +217,7 @@ class FirebaseService {
     }
     
     // Fetch a trip from Firestore by invite code
-    func fetchTrip(withInviteCode code: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
+    public func fetchTrip(withInviteCode code: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trip by invite code")
@@ -255,7 +255,7 @@ class FirebaseService {
     }
     
     // Fetch a trip from Firestore by ID
-    func fetchTrip(withId id: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
+    public func fetchTrip(withId id: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) {
         // Check if user is authenticated before fetching
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for fetching trip by ID")
@@ -290,7 +290,7 @@ class FirebaseService {
     }
     
     // Listen for real-time updates to a trip
-    func listenForTripUpdates(tripId: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) -> Any? {
+    public func listenForTripUpdates(tripId: String, completion: @escaping (TravelSplitModels.Trip?, Error?) -> Void) -> Any? {
         // Check if user is authenticated before listening
         if Auth.auth().currentUser == nil {
             print("No authenticated user found for listening to trip updates")
@@ -327,7 +327,7 @@ class FirebaseService {
     }
     
     // Stop listening for updates
-    func stopListening(listener: Any) {
+    public func stopListening(listener: Any) {
         if let listener = listener as? ListenerRegistration {
             listener.remove()
         }
@@ -336,7 +336,7 @@ class FirebaseService {
     // MARK: - Deep Linking
     
     /// Create a Universal Link for sharing that works with app installation detection
-    func createUniversalLink(inviteCode: String) -> URL {
+    public func createUniversalLink(inviteCode: String) -> URL {
         // Use Universal Link that will redirect to App Store if app not installed
         let universalLink = "https://equisplit.ingenuitylabs.net/join/\(inviteCode)"
         print("Generated Universal Link: \(universalLink)")
@@ -344,14 +344,14 @@ class FirebaseService {
     }
     
     /// Create a direct app URL scheme for fallback/testing
-    func createDirectAppLink(inviteCode: String) -> URL {
+    public func createDirectAppLink(inviteCode: String) -> URL {
         let directURL = "travelsplit://join?code=\(inviteCode)"
         print("Direct app URL for fallback: \(directURL)")
         return URL(string: directURL)!
     }
     
     // Generate a shareable message for the invite code
-    func generateShareMessage(inviteCode: String, tripName: String) -> String {
+    public func generateShareMessage(inviteCode: String, tripName: String) -> String {
         // Use Universal Link for better user experience
         let universalLink = createUniversalLink(inviteCode: inviteCode)
         
@@ -360,7 +360,7 @@ class FirebaseService {
     
     // Generate a unique ID for an unclaimed participant
     // This helps tie the unclaimed participant to the authenticated user who created it
-    func generateUnclaimedParticipantId(name: String) -> String {
+    public func generateUnclaimedParticipantId(name: String) -> String {
         // Format: "unclaimed_{auth_user_id}_{random_uuid}_{sanitized_name}"
         let authUserId = Auth.auth().currentUser?.uid ?? "no_auth"
         let randomPart = UUID().uuidString.prefix(8)
@@ -376,7 +376,7 @@ class FirebaseService {
     // MARK: - Trip Operations
     
     /// Delete a trip from Firestore
-    func deleteTrip(withId id: String, completion: @escaping (Error?) -> Void) {
+    public func deleteTrip(withId id: String, completion: @escaping (Error?) -> Void) {
         guard isAuthenticated else {
             completion(NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]))
             return
@@ -401,7 +401,7 @@ class FirebaseService {
     // MARK: - User Data Migration
     
     // Transfer user data from one user ID to another (e.g., from anonymous to signed-in user)
-    func migrateUserData(fromId: String, toId: String, completion: @escaping (Bool) -> Void) {
+    public func migrateUserData(fromId: String, toId: String, completion: @escaping (Bool) -> Void) {
         let db = Firestore.firestore()
         let batch = db.batch()
         

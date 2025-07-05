@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Currency Formatter
 
@@ -254,7 +258,9 @@ struct ExpenseCardView: View {
             .padding()
             .background(Color(UIColor.secondarySystemGroupedBackground))
             .cornerRadius(12)
+            #if !SKIP
             .contentShape(Rectangle())
+            #endif
         }
         .buttonStyle(PlainButtonStyle())
     }

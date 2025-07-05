@@ -1,0 +1,7 @@
+dependencies:
+  - SkipUI
+  - SkipFoundation
+  - TravelSplitServices
+
+# Extensions module configuration
+# This module contains SwiftUI and other utility extensions 

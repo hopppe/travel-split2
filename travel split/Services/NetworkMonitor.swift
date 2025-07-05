@@ -10,7 +10,7 @@ import Combine
 
 // MARK: - Network Monitoring Protocol
 
-protocol NetworkMonitoring: ObservableObject {
+public protocol NetworkMonitoring: ObservableObject {
     var isConnected: Bool { get }
     var connectivityChangedPublisher: PassthroughSubject<Bool, Never> { get }
     
@@ -19,14 +19,14 @@ protocol NetworkMonitoring: ObservableObject {
 
 // MARK: - Default Network Monitor Implementation
 
-class NetworkMonitor: NetworkMonitoring, ObservableObject {
-    static let shared = NetworkMonitor()
+public class NetworkMonitor: NetworkMonitoring, ObservableObject {
+    public static let shared = NetworkMonitor()
     
     // Published property that indicates network status
-    @Published var isConnected = true
+    @Published public var isConnected = true
     
     // For publishing connectivity change notifications
-    let connectivityChangedPublisher = PassthroughSubject<Bool, Never>()
+    public let connectivityChangedPublisher = PassthroughSubject<Bool, Never>()
     
     private init() {
         setupMonitor()
@@ -43,7 +43,7 @@ class NetworkMonitor: NetworkMonitoring, ObservableObject {
     }
     
     // Method to manually check connectivity status
-    func checkConnectivity() {
+    public func checkConnectivity() {
         #if canImport(Network)
         checkIOSConnectivity()
         #else

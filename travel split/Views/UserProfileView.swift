@@ -1,5 +1,9 @@
 import SwiftUI
 import FirebaseAuth
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct UserProfileView: View {
     @Environment(\.dismiss) private var dismiss
@@ -32,14 +36,14 @@ struct UserProfileView: View {
                 Section(header: Text("profile".localized)) {
                     TextField("name".localized, text: $userName)
                         .textContentType(.name)
-                        .autocapitalization(.words)
+                        .autocapitalization(TextInputAutocapitalization.words)
                         .safeRTLTextField()
                     
                     if !isAnonymousUser {
                         TextField("email".localized, text: $userEmail)
                             .textContentType(.emailAddress)
-                            .autocapitalization(.none)
-                            .keyboardType(.emailAddress)
+                                                    .autocapitalization(TextInputAutocapitalization.none)
+                        .keyboardType(UIKeyboardType.emailAddress)
                             .disabled(true)
                             .safeRTLTextField()
                     }

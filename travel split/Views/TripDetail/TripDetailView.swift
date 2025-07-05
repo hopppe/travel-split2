@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct TripDetailView: View {
     @ObservedObject var viewModel: TripViewModel
@@ -17,7 +21,7 @@ struct TripDetailView: View {
     @State private var selectedTab = 0
     @State private var showingDeleteConfirmation = false
     @State private var showingBalanceWarning = false
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     
     // Language manager for localization updates
     @EnvironmentObject var languageManager: LanguageManager
@@ -55,6 +59,7 @@ struct TripDetailView: View {
         .onAppear {
             viewModel.selectTrip(trip)
             
+            #if !SKIP
             // Set up observer for deep link navigation to expenses
             NotificationCenter.default.addObserver(
                 forName: NSNotification.Name("NavigateToExpenses"),
@@ -67,10 +72,13 @@ struct TripDetailView: View {
                     print("Switched to expenses tab for deep link navigation")
                 }
             }
+            #endif
         }
         .onDisappear {
+            #if !SKIP
             // Clean up notification observer
             NotificationCenter.default.removeObserver(self, name: NSNotification.Name("NavigateToExpenses"), object: nil)
+            #endif
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -149,11 +157,13 @@ struct TripDetailView: View {
             applicationActivities: nil
         )
         
+        #if !SKIP
         // Present the share sheet
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootViewController = windowScene.windows.first?.rootViewController {
             rootViewController.present(activityVC, animated: true)
         }
+        #endif
     }
     
     // Helper to format currency

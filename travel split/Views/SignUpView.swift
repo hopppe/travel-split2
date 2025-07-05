@@ -1,4 +1,8 @@
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
@@ -26,13 +30,13 @@ struct SignUpView: View {
                 Section(header: Text("profile".localized)) {
                     TextField("name".localized, text: $name)
                         .textContentType(.name)
-                        .autocapitalization(.words)
+                        .autocapitalization(TextInputAutocapitalization.words)
                         .safeRTLTextField()
                     
                     TextField("email".localized, text: $email)
                         .textContentType(.emailAddress)
-                        .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
+                        .autocapitalization(TextInputAutocapitalization.none)
+                        .keyboardType(UIKeyboardType.emailAddress)
                         .safeRTLTextField()
                 }
                 

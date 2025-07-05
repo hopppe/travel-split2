@@ -8,6 +8,10 @@
 import SwiftUI
 import Foundation
 import FirebaseCore
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Participant Row View
 /// A reusable row view for participant selection and amount entry
@@ -52,7 +56,7 @@ struct ParticipantRow: View {
                         .font(.subheadline)
                     
                     TextField("0.00", text: $editableAmount)
-                        .keyboardType(.decimalPad)
+                        .keyboardType(UIKeyboardType.decimalPad)
                         .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                         .frame(width: 80)
                         .onReceive(editableAmount.publisher.collect()) { _ in
@@ -186,7 +190,9 @@ struct ExpenseCurrencyPickerView: View {
                                     .foregroundColor(.accentColor)
                             }
                         }
+                        #if !SKIP
                         .contentShape(Rectangle())
+                        #endif
                     }
                     .buttonStyle(PlainButtonStyle())
                 }

@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Participant Claim View
 
@@ -62,7 +66,9 @@ struct ParticipantClaimView: View {
                                 joinAsNewParticipant()
                             }
                             .buttonStyle(.borderedProminent)
+                            #if !SKIP
                             .controlSize(.large)
+                            #endif
                             
                             Text("claim_participant_footer".localized)
                                 .font(.caption)
@@ -145,8 +151,10 @@ struct ParticipantMatchRow: View {
                 .foregroundColor(.accentColor)
         }
         .padding(.vertical, 4)
+        #if !SKIP
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        #endif
         .accessibilityLabel("claim".localized + " \(participant.name)\(participant.email.isEmpty ? "" : ", email: \(participant.email)")")
     }
 }

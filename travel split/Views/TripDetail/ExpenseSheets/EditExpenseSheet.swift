@@ -7,6 +7,13 @@
 
 import SwiftUI
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
+#if !SKIP
+import UIKit
+#endif
 
 // No need to declare our own version - we'll use the one from the models
 // This avoids the "invalid redeclaration" error
@@ -63,13 +70,19 @@ struct EditExpenseSheet: View {
                             .foregroundColor(.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
+#if !SKIP
                             .background(Color(UIColor.systemGray5))
+#else
+                            .background(Color.gray.opacity(0.2))
+#endif
                             .cornerRadius(8)
                     }
                     .accessibilityLabel("select_currency".localized)
                     
                     TextField("amount".localized, text: $expenseAmount)
-                        .keyboardType(.decimalPad)
+#if !SKIP
+                        .keyboardType(UIKeyboardType.decimalPad)
+#endif
                         .safeRTLTextField()
                         .accessibilityLabel("expense_amount".localized)
                 }
@@ -97,7 +110,9 @@ struct EditExpenseSheet: View {
                         .labelsHidden()
                     }
                     .rtlHStack()
+                    #if !SKIP
                     .accessibilityElement(children: .combine)
+                    #endif
                     .accessibilityLabel("select_who_paid".localized)
                     
                     // Date row
@@ -115,7 +130,9 @@ struct EditExpenseSheet: View {
                         }
                     }
                     .rtlHStack()
+                    #if !SKIP
                     .accessibilityElement(children: .combine)
+                    #endif
                     .accessibilityLabel("select_expense_date".localized)
                 }
                 
@@ -164,7 +181,7 @@ struct EditExpenseSheet: View {
         }
         .forceRTL()
         .navigationTitle("edit_expense_title".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(NavigationBarItem.TitleDisplayMode.inline)
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(
             leading: Button("cancel".localized) {
@@ -175,7 +192,7 @@ struct EditExpenseSheet: View {
             }
             .disabled(!isFormValid())
         )
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: VerticalEdge.bottom) {
             Button(role: .destructive) {
                 viewModel.deleteExpense(withId: expense.id)
                 dismiss()
@@ -202,7 +219,7 @@ struct EditExpenseSheet: View {
                     .environment(\.locale, languageManager.currentLocale)
                     .padding()
                     .navigationTitle("select_date".localized)
-                    .navigationBarTitleDisplayMode(.inline)
+                    .navigationBarTitleDisplayMode(NavigationBarItem.TitleDisplayMode.inline)
                     .navigationBarItems(
                         trailing: Button("done".localized) {
                             showDatePicker = false
@@ -303,7 +320,7 @@ struct EditExpenseSheet: View {
             title: expenseName,
             amount: amount,
             paidBy: payer,
-            splitType: .custom, // Always use custom split
+            splitType: ExpenseSplitType.custom, // Always use custom split
             customShares: shares,
             category: expense.category,
             currencyCode: getCurrencyCode(for: currencySymbol),

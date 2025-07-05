@@ -14,6 +14,8 @@ let package = Package(
         .library(name: "TravelSplitModels", targets: ["TravelSplitModels"]),
         .library(name: "TravelSplitServices", targets: ["TravelSplitServices"]),
         .library(name: "TravelSplitViewModels", targets: ["TravelSplitViewModels"]),
+        .library(name: "TravelSplitExtensions", targets: ["TravelSplitExtensions"]),
+        .library(name: "TravelSplitViews", targets: ["TravelSplitViews"]),
     ],
     dependencies: [
         .package(url: "https://source.skip.tools/skip.git", from: "1.0.0"),
@@ -59,6 +61,35 @@ let package = Package(
                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk")
             ],
             path: "travel split/ViewModels",
+            plugins: [.plugin(name: "skipstone", package: "skip")]
+        ),
+        
+        // Extensions - Fourth phase
+        .target(
+            name: "TravelSplitExtensions",
+            dependencies: [
+                "TravelSplitServices",
+                .product(name: "SkipFoundation", package: "skip-foundation"),
+                .product(name: "SkipUI", package: "skip-ui")
+            ],
+            path: "travel split/Extensions",
+            plugins: [.plugin(name: "skipstone", package: "skip")]
+        ),
+        
+        // Views - Fifth phase
+        .target(
+            name: "TravelSplitViews",
+            dependencies: [
+                "TravelSplitModels",
+                "TravelSplitServices", 
+                "TravelSplitViewModels",
+                "TravelSplitExtensions",
+                .product(name: "SkipFoundation", package: "skip-foundation"),
+                .product(name: "SkipUI", package: "skip-ui"),
+                .product(name: "FirebaseFirestore", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAuth", package: "firebase-ios-sdk")
+            ],
+            path: "travel split/Views",
             plugins: [.plugin(name: "skipstone", package: "skip")]
         ),
         

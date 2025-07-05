@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Expenses List View
 
@@ -27,7 +31,9 @@ struct ExpensesListView: View {
                 
                 if trip.expenses.isEmpty {
                     EmptyExpensesView(onAddExpense: onAddExpense)
+#if !SKIP
                         .accessibilityElement(children: .contain)
+#endif
                         .accessibilityLabel("no_expenses".localized)
                         .padding(.top, 6) // Slightly increased padding
                 } else {
@@ -104,8 +110,15 @@ struct ExpensesContentView: View {
         dateFormatter.timeStyle = .none
         
         let sortedExpenses = trip.expenses.sorted(by: { $0.date > $1.date })
-        let grouped = Dictionary(grouping: sortedExpenses) { expense in
-            dateFormatter.string(from: expense.date)
+        
+        // Manual grouping implementation for Skip compatibility
+        var grouped: [String: [Expense]] = [:]
+        for expense in sortedExpenses {
+            let dateKey = dateFormatter.string(from: expense.date)
+            if grouped[dateKey] == nil {
+                grouped[dateKey] = []
+            }
+            grouped[dateKey]?.append(expense)
         }
         
         return grouped.sorted { (first, second) in
@@ -163,10 +176,14 @@ struct ExpensesContentView: View {
                 }
                 .padding(.bottom, 80) // Space for FAB
             }
+#if !SKIP
             .refreshable {
                 print("🔄 REFRESHING EXPENSES FROM PULL GESTURE")
-                await refreshData()
+                Task {
+                    await refreshData()
+                }
             }
+#endif
             
             // Floating action button
             FloatingActionButton(systemImage: "plus") {
@@ -178,6 +195,7 @@ struct ExpensesContentView: View {
         }
     }
     
+#if !SKIP
     // Refresh function using async/await
     private func refreshData() async {
         // Set state to refreshing
@@ -197,6 +215,13 @@ struct ExpensesContentView: View {
             }
         }
     }
+#else
+    // Skip stub - non-async version
+    private func refreshData() {
+        // Skip stub - just call the view model refresh directly
+        viewModel.refreshCurrentTrip { _ in }
+    }
+#endif
 }
 
 // MARK: - Expense Row View
@@ -228,6 +253,7 @@ struct ExpenseRowView: View {
             isFirst: isFirst,
             isLast: isLast
         )
+#if !SKIP
         .contextMenu {
             ExpenseContextMenu(
                 onEdit: onEdit,
@@ -239,6 +265,7 @@ struct ExpenseRowView: View {
                 isShowingDeleteConfirmation = true
             }
         }
+#endif
         .confirmationDialog(
             "delete_expense".localized,
             isPresented: $isShowingDeleteConfirmation,
@@ -252,9 +279,11 @@ struct ExpenseRowView: View {
         } message: {
             Text("are_you_sure_delete_expense".localized)
         }
+#if !SKIP
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("double_tap_edit_expense".localized)
+#endif
     }
     
     // MARK: - Helper Properties

@@ -9,6 +9,10 @@
 
 import SwiftUI
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Balance Breakdown Sheet
 struct BalanceBreakdownSheet: View {
@@ -32,7 +36,9 @@ struct BalanceBreakdownSheet: View {
                     Text(balanceSummaryText)
                         .font(.headline)
                         .fontWeight(.bold)
+                        #if !SKIP
                         .fixedSize(horizontal: false, vertical: true)
+                        #endif
                         .foregroundColor(.primary)
                     Spacer()
                 }

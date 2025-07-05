@@ -7,6 +7,13 @@
 
 import SwiftUI
 import Foundation
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
+#if !SKIP
+import UIKit
+#endif
 
 // MARK: - Add Expense Sheet
 struct AddExpenseSheet: View {
@@ -84,7 +91,9 @@ struct AddExpenseSheet: View {
     private var datePickerSheet: some View {
         NavigationStack {
             DatePicker("expense_date".localized, selection: $expenseDate, displayedComponents: .date)
+                #if !SKIP
                 .datePickerStyle(.graphical)
+                #endif
                 .environment(\.locale, languageManager.currentLocale)
                 .padding()
                 .navigationTitle("select_date".localized)
@@ -121,7 +130,11 @@ struct AddExpenseSheet: View {
                 .foregroundColor(.primary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
+#if !SKIP
                 .background(Color(UIColor.systemGray5))
+#else
+                .background(Color.gray.opacity(0.2))
+#endif
                 .cornerRadius(8)
         }
         .accessibilityLabel("select_currency".localized)
@@ -129,7 +142,9 @@ struct AddExpenseSheet: View {
     
     private var amountTextField: some View {
         TextField("amount".localized, text: $expenseAmount)
-            .keyboardType(.decimalPad)
+#if !SKIP
+            .keyboardType(UIKeyboardType.decimalPad)
+#endif
             .safeRTLTextField()
             .accessibilityLabel("expense_amount".localized)
     }
@@ -153,7 +168,9 @@ struct AddExpenseSheet: View {
                 .labelsHidden()
             }
             .rtlHStack()
+            #if !SKIP
             .accessibilityElement(children: .combine)
+            #endif
             .accessibilityLabel("select_who_paid".localized)
             
             HStack {
@@ -170,7 +187,9 @@ struct AddExpenseSheet: View {
                 }
             }
             .rtlHStack()
+            #if !SKIP
             .accessibilityElement(children: .combine)
+            #endif
             .accessibilityLabel("select_expense_date".localized)
         }
     }
@@ -283,9 +302,9 @@ struct AddExpenseSheet: View {
             title: expenseName,
             amount: amount,
             paidBy: payer,
-            splitType: .custom, // Always use custom split
+            splitType: ExpenseSplitType.custom, // Always use custom split
             customShares: shares,
-            category: .other,
+            category: ExpenseCategory.other,
             currencyCode: getCurrencyCode(for: currencySymbol),
             date: expenseDate
         )

@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct ClaimViewCoordinator: View {
     @ObservedObject var viewModel: TripViewModel

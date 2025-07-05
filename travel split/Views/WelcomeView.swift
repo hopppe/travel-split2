@@ -1,4 +1,8 @@
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct WelcomeView: View {
     @StateObject private var authService = AuthenticationService.shared
@@ -42,7 +46,7 @@ struct WelcomeView: View {
                     Text("app_name".localized)
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                 }
                 .padding(.top, 20)
                 
@@ -51,14 +55,14 @@ struct WelcomeView: View {
                     Text("welcome_title".localized)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                     
                     Text("welcome_subtitle".localized)
                         .font(.body)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                         .padding(.horizontal)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                 }
                 
                 Spacer()
@@ -92,7 +96,7 @@ struct WelcomeView: View {
                                 )
                                 .safeRTLTextField()
                                 .onChange(of: userName) { newValue in
-                                    isNameValid = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    isNameValid = !newValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
                                 }
                             
                             Button {
@@ -107,20 +111,20 @@ struct WelcomeView: View {
                                         if success {
                                             print("Successfully created anonymous account")
                                             // Update the user's name
-                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                                             
                                             // Save to UserDefaults to ensure persistence
-                                            UserDefaults.standard.set(userName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "user_name")
+                                            UserDefaults.standard.set(userName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), forKey: "user_name")
                                             
                                             // Complete setup and transition to main UI
                                             hasCompletedSetup = true
                                         } else {
                                             print("Failed to create anonymous account: \(error?.localizedDescription ?? "unknown error")")
                                             // Proceed anyway with local user
-                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+                                            tripViewModel.currentUser.name = userName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                                             
                                             // Save to UserDefaults to ensure persistence
-                                            UserDefaults.standard.set(userName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "user_name")
+                                            UserDefaults.standard.set(userName.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines), forKey: "user_name")
                                             
                                             // Complete setup and transition to main UI
                                             hasCompletedSetup = true
@@ -218,13 +222,13 @@ struct LanguageSelectorSheet: View {
                     Text("select_language".localized)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .rtlAwareAlignment(.center)
-                        .padding(.top, 20)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
+                        .padding(Edge.Set.top, 20)
                     
                     Text("language".localized)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                 }
                 .padding(.bottom, 32)
                 
@@ -269,7 +273,9 @@ struct LanguageSelectorSheet: View {
             }
         }
         .presentationDetents([.medium])
+#if !SKIP
         .presentationDragIndicator(.visible)
+#endif
         .onAppear {
             // Sync with current language when sheet appears
             selectedLanguage = languageManager.currentLanguage
@@ -295,12 +301,12 @@ struct LanguageOptionRow: View {
                     Text(language.nativeDisplayName)
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.primary)
-                        .rtlAwareAlignment(.leading)
+                        .rtlAwareAlignment(HorizontalAlignment.leading)
                     
                     Text(language.displayName)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
-                        .rtlAwareAlignment(.leading)
+                        .rtlAwareAlignment(HorizontalAlignment.leading)
                 }
                 
                 Spacer()

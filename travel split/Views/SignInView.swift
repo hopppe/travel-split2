@@ -1,4 +1,8 @@
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 struct SignInView: View {
     @Environment(\.dismiss) private var dismiss
@@ -25,8 +29,8 @@ struct SignInView: View {
                 Section {
                     TextField("email".localized, text: $email)
                         .textContentType(.emailAddress)
-                        .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
+                        .autocapitalization(TextInputAutocapitalization.none)
+                        .keyboardType(UIKeyboardType.emailAddress)
                         .safeRTLTextField()
                     
                     SecureField("password".localized, text: $password)

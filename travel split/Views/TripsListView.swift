@@ -8,6 +8,10 @@
 import SwiftUI
 import Foundation
 import FirebaseAuth
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
 
 // MARK: - Main Trip List View
 /// The main view that displays all trips and provides options to create or join trips
@@ -56,7 +60,9 @@ struct TripsListView: View {
                         EmptyTripsView(onCreateTripTapped: {
                             showingNewTripSheet = true
                         }, viewModel: viewModel)
+#if !SKIP
                         .accessibilityElement(children: .contain)
+#endif
                         .accessibilityLabel("no_trips".localized)
                     } else {
                         // Display list of trips
@@ -121,7 +127,7 @@ struct TripsListView: View {
                 Alert(
                     title: Text(item.title),
                     message: Text(item.message),
-                    dismissButton: .default(Text("ok".localized))
+                    dismissButton: Alert.Button.default(Text("ok".localized))
                 )
             }
             .onAppear {
@@ -235,8 +241,12 @@ struct TripsListView: View {
         )
         
         // Present the share sheet
+#if !SKIP
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootViewController = windowScene.windows.first?.rootViewController {
+#else
+        if false {
+#endif
             rootViewController.present(activityVC, animated: true)
         }
     }
@@ -296,14 +306,14 @@ struct EmptyTripsView: View {
                     Text("no_groups_yet".localized)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                     
                     Text("create_group_description".localized)
                         .font(.body)
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                         .padding(.horizontal)
-                        .rtlAwareAlignment(.center)
+                        .rtlAwareAlignment(HorizontalAlignment.center)
                     
                     Button(action: onCreateTripTapped) {
                         Label("create_new_group".localized, systemImage: "plus.circle.fill")
@@ -408,8 +418,10 @@ struct TripListContentView: View {
                             .padding(.vertical, 4)
                     }
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+#if !SKIP
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .swipeActions(edge: .trailing) {
+#endif
                         Button(role: .destructive) {
                             tripToLeave = trip
                             if viewModel.canLeaveTrip(trip) {
@@ -421,8 +433,10 @@ struct TripListContentView: View {
                             Label("leave".localized, systemImage: "door.right.hand.open")
                         }
                         .tint(.red)
+#if !SKIP
                     }
                     .contextMenu {
+#endif
                         Button(action: {
                             // Share trip link
                             viewModel.selectTrip(trip)
@@ -444,7 +458,9 @@ struct TripListContentView: View {
                             Label("leave_group".localized, systemImage: "door.right.hand.open")
                                 .foregroundColor(.red)
                         }
+#if !SKIP
                     }
+#endif
                 }
             }
             .listStyle(PlainListStyle())
@@ -597,8 +613,10 @@ struct TripRowView: View {
         }
         .environment(\.layoutDirection, languageManager.layoutDirection)
         .padding(.vertical, 4)
+#if !SKIP
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Group: \(trip.name), \(trip.participants.count) \("participants".localized), \(trip.expenses.isEmpty ? "no_expenses".localized : "\(getUserBalanceDescription(trip))")")
+#endif
     }
     
     /// Get color based on balance status
@@ -678,10 +696,14 @@ struct TripPreviousParticipantView: View {
                     .frame(width: 60)
             }
             .padding(.vertical, 4)
+#if !SKIP
             .contentShape(Rectangle())
+#endif
         }
         .buttonStyle(PlainButtonStyle())
+#if !SKIP
         .accessibilityElement(children: .combine)
+#endif
         .accessibilityLabel("\(participant.name)\(isSelected ? ", \("selected".localized)" : "")")
         .accessibilityHint(isSelected ? "double_tap_to_remove".localized : "double_tap_to_add".localized)
     }
@@ -770,7 +792,7 @@ struct NewTripSheet: View {
                             VStack(spacing: 12) {
                                 TextField("name".localized, text: $participants[index].name)
                                     .safeRTLTextField()
-                                    .padding(.vertical, 4)
+                                    .padding(Edge.Set.vertical, 4)
                             }
                             .padding(.bottom, 8)
                             .overlay(
@@ -783,7 +805,7 @@ struct NewTripSheet: View {
                                             .offset(y: 12)
                                     }
                                 }
-                                , alignment: .bottom
+                                , alignment: Alignment.bottom
                             )
                         }
                         
@@ -910,7 +932,7 @@ struct JoinTripSheet: View {
             Form {
                 Section(header: Text("enter_invite_code_header".localized)) {
                     TextField("invite_code".localized, text: $inviteCode)
-                        .autocapitalization(.none)
+                                                        .autocapitalization(TextInputAutocapitalization.none)
                         .disableAutocorrection(true)
                         .safeRTLTextField()
                         .accessibilityLabel("group_invite_code".localized)

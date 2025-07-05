@@ -12,10 +12,10 @@ import Foundation
 /// Service for handling currency conversions
 /// In a real app, we would fetch real-time rates from an API,
 /// but for simplicity we're using static exchange rates here
-class CurrencyConverterService {
+public class CurrencyConverterService {
     
     // Singleton instance
-    static let shared = CurrencyConverterService()
+    public static let shared = CurrencyConverterService()
     
     // Private constructor for singleton
     private init() {}
@@ -44,7 +44,7 @@ class CurrencyConverterService {
     ]
     
     // Convert amount from one currency to another
-    func convert(amount: Double, from fromCurrency: String, to toCurrency: String) -> Double {
+    public func convert(amount: Double, from fromCurrency: String, to toCurrency: String) -> Double {
         guard let fromRate = exchangeRates[fromCurrency],
               let toRate = exchangeRates[toCurrency] else {
             return amount // Fall back to original amount if currency not found
@@ -56,12 +56,12 @@ class CurrencyConverterService {
     }
     
     // Get all available currency codes
-    func getAllCurrencyCodes() -> [String] {
+    public func getAllCurrencyCodes() -> [String] {
         return Array(exchangeRates.keys).sorted()
     }
     
     // Get all available currency symbols with codes
-    func getAllCurrencySymbolsWithCodes() -> [(symbol: String, code: String)] {
+    public func getAllCurrencySymbolsWithCodes() -> [(symbol: String, code: String)] {
         let symbols = [
             "USD": "$",
             "EUR": "€",

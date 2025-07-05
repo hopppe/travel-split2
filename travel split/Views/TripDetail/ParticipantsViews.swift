@@ -6,6 +6,13 @@
 //
 
 import SwiftUI
+import TravelSplitModels
+import TravelSplitServices
+import TravelSplitViewModels
+import TravelSplitExtensions
+#if !SKIP
+import UIKit
+#endif
 
 // MARK: - Participants View
 
@@ -22,8 +29,14 @@ struct ParticipantsView: View {
     
     var body: some View {
         ZStack {
+#if !SKIP
             Color(UIColor.systemGroupedBackground)
-                .ignoresSafeArea()
+#else
+            Color.gray.opacity(0.1)
+#endif
+#if !SKIP
+                .ignoresSafeArea(SafeAreaRegions.all)
+#endif
             
             VStack {
                 List {
@@ -34,6 +47,7 @@ struct ParticipantsView: View {
                                 participant: participant,
                                 isCurrentUser: isCurrentUser(participant)
                             )
+#if !SKIP
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel(buildAccessibilityLabel(for: participant))
                             .contextMenu {
@@ -64,10 +78,15 @@ struct ParticipantsView: View {
                                     }
                                 }
                             }
-                            .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .contentShape(Rectangle())
                             .accessibilityHint("long_press_for_options".localized)
+#endif
+#if !SKIP
+                            .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+#else
+                            .listRowBackground(Color.gray.opacity(0.05))
+#endif
                         }
                     }
                     
@@ -220,6 +239,7 @@ struct ParticipantsView: View {
             tripName: trip.name
         )
         
+#if !SKIP
         let activityVC = UIActivityViewController(
             activityItems: [shareMessage],
             applicationActivities: nil
@@ -230,6 +250,7 @@ struct ParticipantsView: View {
            let rootViewController = windowScene.windows.first?.rootViewController {
             rootViewController.present(activityVC, animated: true)
         }
+#endif
     }
     
     /// Update the current user's name in this specific trip only
@@ -316,7 +337,9 @@ struct ParticipantRowView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, minHeight: 60) // Ensure minimum height for better touch target
+#if !SKIP
         .contentShape(Rectangle()) // Make entire area tappable
+#endif
         .background(Color.clear)
     }
 }
@@ -355,7 +378,9 @@ struct EditNameSheet: View {
                 Section(header: Text("your_name".localized)) {
                     TextField("enter_your_name".localized, text: $newName)
                         .focused($isTextFieldFocused)
-                        .autocapitalization(.words)
+#if !SKIP
+                        .autocapitalization(TextInputAutocapitalization.words)
+#endif
                         .disableAutocorrection(false)
                         .safeRTLTextField()
                         .accessibilityLabel("your_name".localized)
