@@ -116,7 +116,7 @@ class FirebaseService {
         print("Starting to save trip to Firestore: \(trip.id)")
         // Real Firestore implementation
         let db = Firestore.firestore()
-        
+
         // Check if user is authenticated before saving
         if Auth.auth().currentUser == nil {
             print("No authenticated user found, but NOT automatically creating anonymous user")
@@ -124,19 +124,24 @@ class FirebaseService {
             completion(false, NSError(domain: "FirebaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required to save to Firestore"]))
             return
         }
-        
+
         // User is authenticated
         let currentUser = Auth.auth().currentUser!
         print("Saving trip with authenticated user: \(currentUser.uid)")
         print("Trip has \(trip.participants.count) participants")
-        
+
         // Print participant IDs for debugging
         for (index, participant) in trip.participants.enumerated() {
             print("Participant \(index): id=\(participant.id), name=\(participant.name), isClaimed=\(participant.isClaimed)")
         }
-        
+
+        // Ensure participantIds is up-to-date before saving
+        var tripToSave = trip
+        tripToSave.updateParticipantIds()
+        print("Updated participantIds: \(tripToSave.participantIds ?? [])")
+
         do {
-            try db.collection("trips").document(trip.id).setData(from: trip) { error in
+            try db.collection("trips").document(tripToSave.id).setData(from: tripToSave) { error in
                 if let error = error {
                     print("Error saving trip: \(error.localizedDescription)")
                     completion(false, error)
@@ -162,56 +167,97 @@ class FirebaseService {
         }
         
         print("Fetching trips for user: \(userId)")
-        
+
         // Real Firestore implementation
         let db = Firestore.firestore()
-        
-        // Query for all trips - we'll filter for user membership client-side
-        // This approach is necessary because Firestore doesn't support querying on nested fields in arrays
+
+        // Try efficient query first (for trips with participantIds field)
         db.collection("trips")
+            .whereField("participantIds", arrayContains: userId)
             .getDocuments { snapshot, error in
                 if let error = error {
-                    print("Error fetching trips: \(error.localizedDescription)")
+                    print("Error fetching trips with participantIds query: \(error.localizedDescription)")
                     completion(nil, error)
                     return
                 }
-                
-                guard let documents = snapshot?.documents else {
-                    print("No trips found")
-                    completion([], nil)
-                    return
-                }
-                
+
                 var trips: [Trip] = []
-                
-                for document in documents {
-                    do {
-                        let trip = try document.data(as: Trip.self)
-                        
-                        // Check if the user is a participant in this trip
-                        let isParticipant = trip.participants.contains { participant in
-                            // Check for direct ID match or claimed match
-                            return participant.id == userId || participant.claimedByUserId == userId
-                        }
-                        
-                        if isParticipant {
+
+                if let documents = snapshot?.documents {
+                    for document in documents {
+                        do {
+                            var trip = try document.data(as: Trip.self)
+
+                            // Ensure participantIds is up-to-date
+                            if trip.participantIds == nil {
+                                print("Migrating trip \(trip.id) - generating participantIds")
+                                trip.updateParticipantIds()
+                                try? db.collection("trips").document(trip.id).setData(from: trip)
+                            }
+
                             print("User is a participant in trip: \(trip.id), \(trip.name)")
                             trips.append(trip)
-                        } else {
-                            // Print all participant IDs for debugging
-                            print("Trip: \(trip.id), \(trip.name) - User is NOT a participant. Checking participants:")
-                            for (index, p) in trip.participants.enumerated() {
-                                print("  \(index): \(p.name) (ID: \(p.id), isClaimed: \(p.isClaimed), claimedByUserId: \(p.claimedByUserId ?? "none"))")
-                            }
+                        } catch {
+                            print("Error decoding trip \(document.documentID): \(error.localizedDescription)")
                         }
-                    } catch {
-                        print("Error decoding trip \(document.documentID): \(error.localizedDescription)")
-                        // Continue loading other trips even if one fails
                     }
                 }
-                
-                print("Found \(trips.count) trips where user is a participant")
-                completion(trips, nil)
+
+                print("Found \(trips.count) trips with participantIds field")
+
+                // If no trips found with efficient query, try fallback query for old trips
+                // This is a one-time migration path - once trips are migrated, they'll use the fast query
+                if trips.isEmpty {
+                    print("No trips found with participantIds, trying fallback query for migration...")
+
+                    db.collection("trips")
+                        .getDocuments { fallbackSnapshot, fallbackError in
+                            if let fallbackError = fallbackError {
+                                print("Error with fallback query: \(fallbackError.localizedDescription)")
+                                completion(nil, fallbackError)
+                                return
+                            }
+
+                            guard let fallbackDocuments = fallbackSnapshot?.documents else {
+                                print("No trips found in fallback query")
+                                completion([], nil)
+                                return
+                            }
+
+                            var fallbackTrips: [Trip] = []
+
+                            for document in fallbackDocuments {
+                                do {
+                                    var trip = try document.data(as: Trip.self)
+
+                                    // Check if user is a participant
+                                    let isParticipant = trip.participants.contains { participant in
+                                        return participant.id == userId || participant.claimedByUserId == userId
+                                    }
+
+                                    if isParticipant {
+                                        // Migrate this trip by adding participantIds
+                                        print("Migrating old trip \(trip.id) - \(trip.name)")
+                                        trip.updateParticipantIds()
+                                        try? db.collection("trips").document(trip.id).setData(from: trip)
+
+                                        print("User is a participant in trip: \(trip.id), \(trip.name)")
+                                        fallbackTrips.append(trip)
+                                    }
+                                } catch {
+                                    print("Error decoding trip \(document.documentID): \(error.localizedDescription)")
+                                }
+                            }
+
+                            print("Found \(fallbackTrips.count) trips via fallback migration query")
+                            print("Successfully loaded \(fallbackTrips.count) trips for user")
+                            completion(fallbackTrips, nil)
+                        }
+                } else {
+                    // Found trips with efficient query
+                    print("Successfully loaded \(trips.count) trips for user")
+                    completion(trips, nil)
+                }
             }
     }
     
@@ -453,6 +499,155 @@ class FirebaseService {
             // If no documents were found, consider it a success
             if documents.isEmpty {
                 completion(true)
+            }
+        }
+    }
+
+    // MARK: - FCM Token Management
+
+    /// Save FCM token to Firestore for push notifications
+    func updateUserFCMToken(userId: String, token: String, language: String, completion: @escaping (Error?) -> Void) {
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+
+        // First check if user document exists
+        userRef.getDocument { (document, error) in
+            if let error = error {
+                print("Error checking user document: \(error.localizedDescription)")
+                completion(error)
+                return
+            }
+
+            var updateData: [String: Any] = [
+                "fcmToken": token,
+                "language": language,
+                "notificationsEnabled": true
+            ]
+
+            // If user document doesn't exist, create it with basic info
+            if document == nil || !document!.exists {
+                print("User document doesn't exist, creating it with FCM token")
+
+                // Get user info from UserDefaults or Firebase Auth
+                let userName = UserDefaults.standard.string(forKey: "user_name") ?? "User"
+                let userEmail = UserDefaults.standard.string(forKey: "user_email") ?? ""
+
+                updateData["name"] = userName
+                updateData["email"] = userEmail
+                updateData["isClaimed"] = true
+                updateData["createdAt"] = FieldValue.serverTimestamp()
+            }
+
+            // Save/update the user document
+            userRef.setData(updateData, merge: true) { error in
+                if let error = error {
+                    print("Error saving FCM token: \(error.localizedDescription)")
+                    completion(error)
+                } else {
+                    print("FCM token and user data saved successfully for user: \(userId)")
+                    completion(nil)
+                }
+            }
+        }
+    }
+
+    /// Remove FCM token from Firestore (on sign out or disable notifications)
+    func removeFCMToken(userId: String, completion: @escaping (Error?) -> Void) {
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+
+        userRef.updateData([
+            "fcmToken": FieldValue.delete()
+        ]) { error in
+            if let error = error {
+                print("Error removing FCM token: \(error.localizedDescription)")
+                completion(error)
+            } else {
+                print("FCM token removed successfully")
+                completion(nil)
+            }
+        }
+    }
+
+    /// Update user's notification preference
+    func updateUserNotificationPreference(userId: String, enabled: Bool, completion: @escaping (Error?) -> Void) {
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+
+        userRef.setData([
+            "notificationsEnabled": enabled
+        ], merge: true) { error in
+            if let error = error {
+                print("Error updating notification preference: \(error.localizedDescription)")
+                completion(error)
+            } else {
+                print("Notification preference updated successfully")
+                completion(nil)
+            }
+        }
+    }
+
+    /// Get user's notification preference
+    func getUserNotificationPreference(userId: String, completion: @escaping (Bool, Error?) -> Void) {
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+
+        userRef.getDocument { snapshot, error in
+            if let error = error {
+                print("Error fetching notification preference: \(error.localizedDescription)")
+                completion(true, error) // Default to enabled on error
+                return
+            }
+
+            guard let snapshot = snapshot, snapshot.exists else {
+                print("User document doesn't exist, defaulting to enabled")
+                completion(true, nil) // Default to enabled
+                return
+            }
+
+            let enabled = snapshot.data()?["notificationsEnabled"] as? Bool ?? true
+            completion(enabled, nil)
+        }
+    }
+
+    /// Ensure user document exists in Firestore with complete data
+    /// This should be called whenever we need to guarantee the user document is complete
+    func ensureUserDocumentExists(userId: String, name: String, email: String, completion: @escaping (Error?) -> Void) {
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userId)
+
+        userRef.getDocument { (document, error) in
+            if let error = error {
+                print("Error checking user document: \(error.localizedDescription)")
+                completion(error)
+                return
+            }
+
+            // Prepare user data
+            var userData: [String: Any] = [
+                "name": name,
+                "email": email,
+                "isClaimed": true
+            ]
+
+            // If document doesn't exist, add createdAt
+            if document == nil || !document!.exists {
+                print("Creating new user document for: \(userId)")
+                userData["createdAt"] = FieldValue.serverTimestamp()
+                userData["notificationsEnabled"] = true // Default to enabled
+            } else {
+                print("Updating existing user document for: \(userId)")
+            }
+
+            // Always use merge to preserve existing fields like fcmToken, language, etc.
+            userRef.setData(userData, merge: true) { error in
+                if let error = error {
+                    print("Error ensuring user document: \(error.localizedDescription)")
+                    completion(error)
+                } else {
+                    print("User document ensured for: \(userId)")
+                    completion(nil)
+                }
             }
         }
     }

@@ -9,6 +9,7 @@ import SwiftUI
 // Import FirebaseCore in the main app file too
 import FirebaseCore
 import FirebaseAuth
+import FirebaseFirestore
 import Combine
 
 @main
@@ -114,10 +115,19 @@ struct TravelSplitApp: App {
                     .onAppear {
                         // Set up appearance
                         configureAppearance()
-                        
+
+                        // Ensure user document exists in Firestore with complete data
+                        ensureUserDocumentInFirestore()
+
+                        // Request notification permissions
+                        requestNotificationPermission()
+
+                        // Clear badge when app opens
+                        NotificationService.shared.clearBadge()
+
                         // Check for deep links
                         handleStartupDeepLink()
-                        
+
                         // Set up observer for claiming view
                         setupTripViewModelObservers()
                     }
@@ -314,6 +324,36 @@ struct TravelSplitApp: App {
     private func handleDeepLink(_ url: URL) {
         print("Processing deep link while app is running: \(url)")
         handleIncomingURL(url)
+    }
+
+    // Request notification permission
+    private func requestNotificationPermission() {
+        NotificationService.shared.requestPermission { granted in
+            if granted {
+                print("Notification permission granted")
+            } else {
+                print("Notification permission denied")
+            }
+        }
+    }
+
+    // Ensure user document in Firestore has complete data
+    private func ensureUserDocumentInFirestore() {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("No authenticated user, skipping Firestore user document sync")
+            return
+        }
+
+        let userName = tripViewModel.currentUser.name
+        let userEmail = tripViewModel.currentUser.email ?? ""
+
+        FirebaseService.shared.ensureUserDocumentExists(userId: userId, name: userName, email: userEmail) { error in
+            if let error = error {
+                print("Error ensuring user document: \(error.localizedDescription)")
+            } else {
+                print("User document synchronized successfully")
+            }
+        }
     }
 }
 

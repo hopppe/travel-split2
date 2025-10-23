@@ -323,7 +323,8 @@ struct ExpenseButton: View {
                     showBaseConversion: true,
                     expenseCurrency: expense.currencyCode ?? "USD",
                     baseCurrency: trip.baseCurrencyCode,
-                    baseSymbol: trip.baseCurrencySymbol
+                    baseSymbol: trip.baseCurrencySymbol,
+                    savedConvertedAmount: expense.convertedAmount
                 )
             }
             .padding(12)
@@ -347,7 +348,7 @@ struct ExpenseDetails: View {
     let trip: Trip
     let dateFormatter: DateFormatter
     var showDate: Bool = true
-    
+
     var body: some View {
         VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
             // Title
@@ -355,10 +356,20 @@ struct ExpenseDetails: View {
                 .font(.headline)
                 .foregroundColor(.primary)
                 .rtlAwareAlignment()
-            
+
             // Payer info
             PayerText(expense: expense, trip: trip)
-            
+
+            // Added by info (if different from paidBy)
+            if let addedBy = expense.addedBy,
+               addedBy.id != expense.paidBy.id,
+               let adderInTrip = trip.participants.first(where: { $0.id == addedBy.id }) {
+                Text("\("added_by".localized) \(adderInTrip.name)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .rtlAwareAlignment()
+            }
+
             // Date (only show if requested)
             if showDate {
                 Text(dateFormatter.string(from: expense.date))
@@ -370,22 +381,28 @@ struct ExpenseDetails: View {
     }
 }
 
-/// Text showing who paid for an expense
+/// Text showing who paid for an expense with avatar
 struct PayerText: View {
     let expense: Expense
     let trip: Trip
-    
+
     var body: some View {
         if let payer = trip.participants.first(where: { $0.id == expense.paidBy.id }) {
-            Text("\("paid_by".localized) \(payer.name)")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .rtlAwareAlignment()
+            HStack(spacing: 6) {
+                ParticipantAvatar(participant: payer, size: 24)
+                Text("\("paid_by".localized) \(payer.name)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .rtlAwareAlignment()
         } else {
-            Text("\("paid_by".localized) \(expense.paidBy.name)")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .rtlAwareAlignment()
+            HStack(spacing: 6) {
+                ParticipantAvatar(participant: expense.paidBy, size: 24)
+                Text("\("paid_by".localized) \(expense.paidBy.name)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .rtlAwareAlignment()
         }
     }
 }

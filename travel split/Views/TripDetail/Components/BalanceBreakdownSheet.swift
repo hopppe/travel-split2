@@ -108,11 +108,11 @@ struct BalanceBreakdownSheet: View {
                 .padding(.vertical, 4)
             }
         }
-        .navigationTitle("Balance Details")
+        .navigationTitle("balance_details".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
+                Button("done".localized) {
                     isPresented = false
                 }
             }
@@ -152,9 +152,9 @@ struct BalanceBreakdownSheet: View {
     var balanceSummaryText: String {
         let amount = abs(debt.amount)
         let formattedAmount = formatCurrency(amount)
-        
+
         // For all cases, show who owes what to whom
-        return "\(debt.from.name) owes \(formattedAmount) to \(debt.to.name)"
+        return String(format: "owes_to_format".localized, debt.from.name, formattedAmount, debt.to.name)
     }
     
     /// Explanation of how the debt was calculated and simplified
@@ -191,35 +191,35 @@ struct BalanceBreakdownSheet: View {
         }
         
         // Start building the explanation
-        var explanation = "Before simplification:\n"
-        
+        var explanation = "before_simplification".localized + "\n"
+
         // Add all participants' balances
         for participant in trip.participants.sorted(by: { $0.name < $1.name }) {
             let balance = balances[participant.id, default: 0]
-            explanation += "• \(participant.name) had a net balance of \(formatCurrency(balance))\n"
+            explanation += "• " + String(format: "net_balance_format".localized, participant.name, formatCurrency(balance)) + "\n"
         }
-        
+
         // Get all the simplified debts
         let allDebts = viewModel.calculateDebts()
-        
+
         // Add list of all debts after simplification
-        explanation += "\nAfter simplification:\n"
-        
+        explanation += "\n" + "after_simplification".localized + "\n"
+
         if allDebts.isEmpty {
-            explanation += "Everyone is settled up! No payments are needed.\n"
+            explanation += "everyone_settled_up_no_payments".localized + "\n"
         } else {
             for debt in allDebts {
-                explanation += "• \(debt.from.name) owes \(formatCurrency(debt.amount)) to \(debt.to.name)\n"
+                explanation += "• " + String(format: "owes_to_format".localized, debt.from.name, formatCurrency(debt.amount), debt.to.name) + "\n"
             }
         }
-        
+
         // Add information about this specific debt
         if !allDebts.isEmpty {
-            explanation += "\nThe highlighted balance is part of this simplified solution, where \(debt.from.name) owes \(formatCurrency(debt.amount)) to \(debt.to.name).\n"
+            explanation += "\n" + String(format: "highlighted_balance_explanation".localized, debt.from.name, formatCurrency(debt.amount), debt.to.name) + "\n"
         }
-        
+
         // Final note
-        explanation += "\nThis represents the most efficient way for everyone to settle up."
+        explanation += "\n" + "most_efficient_settlement".localized
         
         return explanation
     }

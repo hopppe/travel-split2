@@ -12,20 +12,23 @@ import SwiftUI
 /// Main view for the trip balances tab showing debts and settlements
 struct BalancesView: View {
     @ObservedObject var viewModel: TripViewModel
-    
+    @EnvironmentObject var languageManager: LanguageManager
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
-            
+
             if let trip = viewModel.currentTrip, !trip.expenses.isEmpty {
                 let debts = viewModel.calculateDebts()
-                
+
                 if debts.isEmpty {
                     SettledUpView()
                         .environmentObject(viewModel)
+                        .environmentObject(languageManager)
                 } else {
                     BalancesContentView(trip: trip, debts: debts, viewModel: viewModel)
+                        .environmentObject(languageManager)
                 }
             } else {
                 NoExpensesView()
@@ -66,49 +69,99 @@ struct CurrencyCodePickerSheet: View {
 struct SettledUpView: View {
     @State private var showingRecordPaymentSheet = false
     @EnvironmentObject var viewModel: TripViewModel
-    
+    @EnvironmentObject var languageManager: LanguageManager
+
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.accentColor)
-                .accessibilityHidden(true)
-            
-            Text("all_settled_up".localized)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .accessibilityAddTraits(.isHeader)
-            
-            Text("everyone_paid_fair_share".localized)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .padding(.bottom, 30)
-            
-            // Record Payment Button
-            Button(action: {
-                showingRecordPaymentSheet = true
-            }) {
-                HStack {
-                    Image(systemName: "arrow.left.arrow.right.circle.fill")
-                    Text("record_a_payment".localized)
+        VStack {
+            if let trip = viewModel.currentTrip {
+                List {
+                    // Visual Dashboard Section
+                    Section {
+                        BalanceDashboard(trip: trip, viewModel: viewModel)
+                            .environmentObject(languageManager)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+
+                    // Celebration banner
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.accentColor)
+                                .accessibilityHidden(true)
+
+                            Text("all_settled_up".localized)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .accessibilityAddTraits(.isHeader)
+
+                            Text("everyone_paid_fair_share".localized)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+
+                    // All participants section
+                    Section(header: Text("who_owes_what".localized)) {
+                        if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
+                            // Show all other participants with zero balance
+                            let otherParticipants = trip.participants.filter { $0.id != currentUserInTrip.id }
+
+                            ForEach(otherParticipants, id: \.id) { participant in
+                                SettledDebtRowView(
+                                    participant: participant,
+                                    currencySymbol: trip.baseCurrencySymbol
+                                )
+                            }
+                        }
+                    }
+
+                    // Summary section
+                    Section(header: Text("summary".localized)) {
+                        TotalSummaryView(trip: trip, currencySymbol: trip.baseCurrencySymbol)
+                    }
+
+                    // Info section
+                    Section {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(.secondary)
+                            Text("all_amounts_shown_in".localized(with: trip.baseCurrencyCode))
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.accentColor)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+                .listStyle(InsetGroupedListStyle())
+
+                // Record Payment Button
+                Button(action: {
+                    showingRecordPaymentSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.left.arrow.right.circle.fill")
+                        Text("record_a_payment".localized)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                }
+                .accessibilityLabel("record_a_payment".localized)
+                .sheet(isPresented: $showingRecordPaymentSheet) {
+                    NavigationStack {
+                        RecordPaymentSheet(viewModel: viewModel)
+                    }
+                }
             }
-            .padding(.horizontal, 40)
-            .accessibilityLabel("record_a_payment".localized)
         }
-        .padding()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\("all_settled_up".localized). \("everyone_paid_fair_share".localized).")
-        .sheet(isPresented: $showingRecordPaymentSheet) {
-            NavigationStack {
-                RecordPaymentSheet(viewModel: viewModel)
-            }
-        }
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -170,31 +223,19 @@ struct BalancesContentView: View {
     let debts: [Debt]
     @ObservedObject var viewModel: TripViewModel
     @State private var showingRecordPaymentSheet = false
-    
+    @EnvironmentObject var languageManager: LanguageManager
+
     var body: some View {
         VStack {
             List {
-                // User balance overview section
-                Section(header: Text("your_balance".localized)) {
-                    if let currentUserInTrip = viewModel.findCurrentUserInTrip() {
-                        UserBalanceRow(
-                            user: currentUserInTrip,
-                            balance: calculateUserBalance(for: currentUserInTrip.id),
-                            isCurrentUser: true,
-                            currencySymbol: trip.baseCurrencySymbol,
-                            viewModel: viewModel
-                        )
-                    } else {
-                        UserBalanceRow(
-                            user: viewModel.currentUser,
-                            balance: calculateUserBalance(for: viewModel.currentUser.id),
-                            isCurrentUser: true,
-                            currencySymbol: trip.baseCurrencySymbol,
-                            viewModel: viewModel
-                        )
-                    }
+                // Visual Dashboard Section
+                Section {
+                    BalanceDashboard(trip: trip, viewModel: viewModel)
+                        .environmentObject(languageManager)
                 }
-                
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+
                 // Debts section
                 Section(header: Text("who_owes_what".localized)) {
                     // First show actual debts

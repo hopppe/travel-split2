@@ -50,8 +50,11 @@ struct TripsListView: View {
                     // Background color
                     Color(UIColor.systemGroupedBackground)
                         .ignoresSafeArea()
-                    
-                    if viewModel.trips.isEmpty {
+
+                    if viewModel.isLoading && viewModel.trips.isEmpty {
+                        // Show skeleton loading state
+                        TripListSkeletonView()
+                    } else if viewModel.trips.isEmpty {
                         // Display empty state view when there are no trips
                         EmptyTripsView(onCreateTripTapped: {
                             showingNewTripSheet = true
@@ -135,16 +138,13 @@ struct TripsListView: View {
                 // Remove notification observer
                 NotificationCenter.default.removeObserver(self)
             }
-            
-            // Navigation link that will be triggered programmatically
-            NavigationLink(
-                destination: selectedTripDestination,
-                isActive: Binding<Bool>(
-                    get: { selectedTripId != nil },
-                    set: { _ in selectedTripId = nil }
-                )
-            ) {
-                EmptyView()
+
+            // Navigation destination for programmatic navigation (iOS 16+)
+            .navigationDestination(isPresented: Binding<Bool>(
+                get: { selectedTripId != nil },
+                set: { if !$0 { selectedTripId = nil } }
+            )) {
+                selectedTripDestination
             }
         }
         .onReceive(viewModel.$errorMessage) { errorMessage in
@@ -553,28 +553,24 @@ struct TripRowView: View {
                     }
                     
                     Spacer()
-                    
-                    Text("\(trip.participants.count) \("participants".localized)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.trailing)
-                    
-                    Image(systemName: "person.2.fill")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                        .accessibilityHidden(true)
+
+                    HStack(spacing: 6) {
+                        StackedParticipantAvatars(participants: trip.participants, size: 24, maxDisplay: 3)
+                        Text("\(trip.participants.count)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .accessibilityLabel("\(trip.participants.count) \("participants".localized)")
                 } else {
                     // LTR layout: participants info first, then balance
-                    Image(systemName: "person.2.fill")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                        .accessibilityHidden(true)
-                    
-                    Text("\(trip.participants.count) \("participants".localized)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                    
+                    HStack(spacing: 6) {
+                        StackedParticipantAvatars(participants: trip.participants, size: 24, maxDisplay: 3)
+                        Text("\(trip.participants.count)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .accessibilityLabel("\(trip.participants.count) \("participants".localized)")
+
                     Spacer()
                     
                     if !trip.expenses.isEmpty {
@@ -693,12 +689,14 @@ struct NewTripSheet: View {
     @Binding var isPresented: Bool
     @Binding var tripName: String
     @Binding var tripDescription: String
-    
+
     @State private var participants: [TripParticipantEntry] = []
     @State private var showingParticipantsSection = false
     @State private var previousParticipants: [User] = []
     @State private var selectedPreviousParticipants = Set<String>()
-    
+    @State private var showingShareSheet = false
+    @State private var createdTrip: Trip?
+
     // Language manager for RTL support
     @EnvironmentObject var languageManager: LanguageManager
     
@@ -822,6 +820,7 @@ struct NewTripSheet: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("create".localized) {
+                        HapticManager.shared.success()
                         createTrip()
                     }
                     .disabled(!isFormValid)
@@ -829,8 +828,45 @@ struct NewTripSheet: View {
             }
         }
         .forceRTL()
+        .alert("group_created_title".localized, isPresented: $showingShareSheet) {
+            Button("share_invite_link".localized) {
+                if let trip = createdTrip {
+                    shareTrip(trip: trip)
+                }
+                dismissSheet()
+            }
+
+            Button("done".localized) {
+                dismissSheet()
+            }
+        } message: {
+            if let _ = createdTrip, !participants.isEmpty || !selectedPreviousParticipants.isEmpty {
+                Text("share_group_participants_added".localized)
+            } else {
+                Text("share_group_invite_others".localized)
+            }
+        }
     }
-    
+
+    /// Share a trip's invite link
+    private func shareTrip(trip: Trip) {
+        let shareMessage = FirebaseService.shared.generateShareMessage(
+            inviteCode: trip.inviteCode,
+            tripName: trip.name
+        )
+
+        let activityVC = UIActivityViewController(
+            activityItems: [shareMessage],
+            applicationActivities: nil
+        )
+
+        // Present the share sheet
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            rootViewController.present(activityVC, animated: true)
+        }
+    }
+
     // Form validation
     private var isFormValid: Bool {
         // Valid if trip name is not empty AND either:
@@ -858,11 +894,11 @@ struct NewTripSheet: View {
     private func createTrip() {
         // Process participants if section is shown
         var initialParticipants: [User] = []
-        
+
         if showingParticipantsSection {
             // Filter out empty entries
             let validParticipants = participants.filter { !$0.name.isEmpty }
-            
+
             // Create unclaimed participants from manual entries
             for entry in validParticipants {
                 initialParticipants.append(User.createUnclaimed(
@@ -870,7 +906,7 @@ struct NewTripSheet: View {
                     email: ""
                 ))
             }
-            
+
             // Add selected previous participants
             for participantId in selectedPreviousParticipants {
                 if let participant = previousParticipants.first(where: { $0.id == participantId }) {
@@ -878,20 +914,29 @@ struct NewTripSheet: View {
                 }
             }
         }
-        
+
         // Create the trip with initial participants
         viewModel.createNewTrip(
             name: tripName,
             description: tripDescription,
             initialParticipants: initialParticipants
         )
-        
-        // Reset fields
+
+        // Store the created trip to show share option
+        createdTrip = viewModel.currentTrip
+
+        // Show share sheet after creation
+        showingShareSheet = true
+    }
+
+    /// Dismiss the sheet and reset fields
+    private func dismissSheet() {
         tripName = ""
         tripDescription = ""
         participants = []
         showingParticipantsSection = false
         selectedPreviousParticipants.removeAll()
+        createdTrip = nil
         isPresented = false
     }
 }
@@ -934,6 +979,7 @@ struct JoinTripSheet: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("join".localized) {
+                        HapticManager.shared.lightImpact()
                         joinTrip()
                     }
                     .disabled(inviteCode.isEmpty)
@@ -977,4 +1023,33 @@ struct JoinTripSheet: View {
             }
         }
     }
-} 
+}
+
+// MARK: - Skeleton Loading View
+
+/// Skeleton loading view shown while trips are being loaded
+struct TripListSkeletonView: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            // Fixed header
+            HStack {
+                Text("your_groups".localized)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                Spacer()
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+
+            List {
+                ForEach(0..<5, id: \.self) { _ in
+                    TripRowSkeleton()
+                        .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                }
+            }
+            .listStyle(PlainListStyle())
+        }
+    }
+}

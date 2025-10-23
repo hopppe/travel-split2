@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local

@@ -279,18 +279,10 @@ struct ParticipantRowView: View {
     
     var body: some View {
         HStack {
-            // Profile image or initial
-            ZStack {
-                Circle()
-                    .fill(participant.isClaimed ? Color.accentColor.opacity(0.2) : Color.orange.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                
-                Text(String(participant.name.prefix(1)))
-                    .font(.headline)
-                    .foregroundColor(participant.isClaimed ? .accentColor : .orange)
-            }
-            .accessibilityHidden(true)
-            
+            // Profile avatar with colored initials
+            ParticipantAvatar(participant: participant, size: 50)
+                .accessibilityHidden(true)
+
             VStack(alignment: languageAwareHorizontalAlignment, spacing: 4) {
                 HStack {
                     Text(participant.name)

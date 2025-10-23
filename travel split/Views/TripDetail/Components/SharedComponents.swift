@@ -18,16 +18,18 @@ struct CurrencyText: View {
     var expenseCurrency: String? = nil
     var baseCurrency: String? = nil
     var baseSymbol: String? = nil
-    
+    var savedConvertedAmount: Double? = nil // NEW: Use saved converted amount instead of recalculating
+
     init(
-        amount: Double, 
-        symbol: String = "$", 
-        color: Color = .primary, 
+        amount: Double,
+        symbol: String = "$",
+        color: Color = .primary,
         font: Font = .body,
         showBaseConversion: Bool = false,
         expenseCurrency: String? = nil,
         baseCurrency: String? = nil,
-        baseSymbol: String? = nil
+        baseSymbol: String? = nil,
+        savedConvertedAmount: Double? = nil
     ) {
         self.amount = amount
         self.symbol = symbol
@@ -37,23 +39,25 @@ struct CurrencyText: View {
         self.expenseCurrency = expenseCurrency
         self.baseCurrency = baseCurrency
         self.baseSymbol = baseSymbol
+        self.savedConvertedAmount = savedConvertedAmount
     }
-    
+
     var body: some View {
         Group {
             if showBaseConversion && expenseCurrency != nil && baseCurrency != nil && baseSymbol != nil && expenseCurrency != baseCurrency {
                 // Show original amount and conversion
-                let convertedAmount = CurrencyConverterService.shared.convert(
+                // Use saved converted amount if available, otherwise calculate (fallback for old expenses)
+                let convertedAmount = savedConvertedAmount ?? CurrencyConverterService.shared.convert(
                     amount: amount,
                     from: expenseCurrency!,
                     to: baseCurrency!
                 )
-                
+
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(symbol)\(String(format: "%.2f", amount))")
                         .foregroundColor(color)
                         .font(font)
-                    
+
                     Text("(\(baseSymbol!)\(String(format: "%.2f", convertedAmount)))")
                         .foregroundColor(color.opacity(0.7))
                         .font(.caption)
@@ -115,21 +119,113 @@ struct EmptyStateView: View {
 struct ParticipantAvatar: View {
     let participant: User
     let size: CGFloat
-    
+
     init(participant: User, size: CGFloat = 40) {
         self.participant = participant
         self.size = size
     }
-    
+
     var body: some View {
         ZStack {
             Circle()
-                .fill(participant.isClaimed ? Color.accentColor.opacity(0.2) : Color.orange.opacity(0.2))
+                .fill(participant.avatarColor.opacity(0.2))
                 .frame(width: size, height: size)
-            
-            Text(String(participant.name.prefix(1)))
+
+            Text(participant.initials)
                 .font(.system(size: size * 0.4, weight: .semibold))
-                .foregroundColor(participant.isClaimed ? .accentColor : .orange)
+                .foregroundColor(participant.avatarColor)
+        }
+        .overlay(
+            Circle()
+                .strokeBorder(participant.avatarColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - User Avatar Extensions
+
+extension User {
+    /// Generates a consistent color for a participant based on their ID
+    var avatarColor: Color {
+        if !isClaimed {
+            return .orange // Unclaimed users get orange color
+        }
+
+        // Hash the user ID to generate a consistent color
+        let hash = abs(id.hashValue)
+        let colors: [Color] = [
+            .blue, .green, .purple, .pink,
+            .red, .indigo, .teal, .cyan, .mint, .brown
+        ]
+        return colors[hash % colors.count]
+    }
+
+    /// Get initials from participant name
+    var initials: String {
+        let components = name.components(separatedBy: " ")
+        if components.count >= 2 {
+            let first = components[0].prefix(1)
+            let last = components[1].prefix(1)
+            return "\(first)\(last)".uppercased()
+        } else {
+            return String(name.prefix(2)).uppercased()
+        }
+    }
+}
+
+// MARK: - Participant Avatar Variants
+
+/// A participant avatar with name label below
+struct ParticipantAvatarWithName: View {
+    let participant: User
+    let size: CGFloat
+
+    init(participant: User, size: CGFloat = 50) {
+        self.participant = participant
+        self.size = size
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ParticipantAvatar(participant: participant, size: size)
+
+            Text(participant.name)
+                .font(.caption)
+                .lineLimit(1)
+                .frame(width: size + 10)
+        }
+    }
+}
+
+/// Stacked avatars for showing multiple participants
+struct StackedParticipantAvatars: View {
+    let participants: [User]
+    let size: CGFloat
+    let maxDisplay: Int
+
+    init(participants: [User], size: CGFloat = 32, maxDisplay: Int = 3) {
+        self.participants = participants
+        self.size = size
+        self.maxDisplay = maxDisplay
+    }
+
+    var body: some View {
+        HStack(spacing: -size * 0.3) {
+            ForEach(Array(participants.prefix(maxDisplay).enumerated()), id: \.element.id) { index, participant in
+                ParticipantAvatar(participant: participant, size: size)
+                    .zIndex(Double(maxDisplay - index))
+            }
+
+            if participants.count > maxDisplay {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Text("+\(participants.count - maxDisplay)")
+                            .font(.system(size: size * 0.35, weight: .medium))
+                            .foregroundColor(.secondary)
+                    )
+            }
         }
     }
 }
@@ -235,7 +331,8 @@ struct ExpenseCardView: View {
                         showBaseConversion: true,
                         expenseCurrency: expense.currencyCode ?? "USD",
                         baseCurrency: trip.baseCurrencyCode,
-                        baseSymbol: trip.baseCurrencySymbol
+                        baseSymbol: trip.baseCurrencySymbol,
+                        savedConvertedAmount: expense.convertedAmount
                     )
                 }
                 

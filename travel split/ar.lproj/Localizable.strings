@@ -52,6 +52,7 @@
 "description" = "الوصف";
 "amount" = "المبلغ";
 "paid_by" = "دفع بواسطة";
+"added_by" = "أضيف بواسطة";
 "split_between" = "قسم بين";
 "save_expense" = "حفظ المصروف";
 "update_expense" = "تحديث المصروف";
@@ -377,4 +378,79 @@
 "record_payment_title" = "تسجيل الدفعة";
 "select_currency_title" = "اختر العملة";
 "recording_payments" = "جاري تسجيل الدفعات...";
-"payment_from_to" = "دفعة من %@ إلى %@"; 
+"payment_from_to" = "دفعة من %@ إلى %@";
+
+// MARK: - Additional UI Elements
+"close" = "إغلاق";
+"zero_placeholder" = "0.00";
+"owes_to_format" = "%@ يدين بـ %@ لـ %@";
+"will_receive_from_format" = "%@ سيستلم %@ من %@";
+"debt_explanation" = "يوضح هذا الدين المبسط بعد حساب جميع المصاريف المشتركة.";
+"person_paid_format" = "%@ دفع %@";
+"person_spent_format" = "%@ أنفق %@";
+"expenses_involved" = "المصاريف المعنية";
+"before_simplification" = "قبل التبسيط:";
+"after_simplification" = "بعد التبسيط:";
+"net_balance_format" = "%@ كان لديه رصيد صافي قدره %@";
+"everyone_settled_up_no_payments" = "الجميع مسوى! لا توجد دفعات مطلوبة.";
+"highlighted_balance_explanation" = "الرصيد المميز هو جزء من هذا الحل المبسط، حيث %@ يدين بـ %@ لـ %@.";
+"most_efficient_settlement" = "يمثل هذا الطريقة الأكثر كفاءة للجميع لتسوية الحسابات.";
+
+// MARK: - Group Creation and Sharing
+"group_created_title" = "تم إنشاء المجموعة!";
+"share_group_participants_added" = "تم إنشاء مجموعتك مع المشاركين. شارك رابط الدعوة حتى يتمكنوا من الانضمام والمطالبة بحساباتهم.";
+"share_group_invite_others" = "شارك رابط الدعوة لدعوة الآخرين للانضمام إلى مجموعتك.";
+
+// MARK: - Push Notifications
+"notification_expense_added_title" = "مصروف جديد";
+"notification_expense_added_body" = "أضاف %@ %@ - %@ في %@";
+"notification_expense_updated_title" = "تحديث المصروف";
+"notification_expense_updated_body" = "تم تحديث %@ إلى %@ في %@";
+"notification_expense_deleted_title" = "حذف المصروف";
+"notification_expense_deleted_body" = "تم حذف %@ من %@";
+"notification_payment_received_title" = "تم استلام الدفع";
+"notification_payment_received_body" = "دفع لك %@ %@ في %@";
+"notification_balance_settled_title" = "تم تسوية الرصيد";
+"notification_balance_settled_body" = "تم تسوية رصيدك في %@ ✓";
+"notification_participant_joined_title" = "مشارك جديد";
+"notification_participant_joined_body" = "انضم %@ إلى %@";
+"notification_participant_left_title" = "غادر المشارك";
+"notification_participant_left_body" = "غادر %@ %@";
+"notification_participant_claimed_title" = "تم المطالبة بالحساب";
+"notification_participant_claimed_body" = "طالب %@ بحسابه في %@";
+"notification_added_to_trip_title" = "تمت الإضافة إلى الرحلة";
+"notification_added_to_trip_body" = "تمت إضافتك إلى %@";
+
+// MARK: - Notification Settings
+"notifications" = "الإشعارات";
+"notifications_enabled" = "تفعيل الإشعارات";
+"notifications_description" = "تلقي إشعارات فورية للمصاريف والمدفوعات وتحديثات المجموعة";
+
+// MARK: - Onboarding
+"onboarding_groups_title" = "إنشاء أو الانضمام للمجموعات";
+"onboarding_groups_description" = "ابدأ بإنشاء مجموعة جديدة لرحلتك أو انضم لمجموعة موجودة برمز الدعوة";
+"onboarding_expenses_title" = "تتبع المصاريف";
+"onboarding_expenses_description" = "أضف المصاريف واختر من دفع وكيفية التقسيم. سنتولى الحسابات!";
+"onboarding_balances_title" = "تسوية الأرصدة";
+"onboarding_balances_description" = "شاهد من يدين لمن وقم بالتسوية بنقرة واحدة. كل شيء متزامن!";
+"skip" = "تخطي";
+"next" = "التالي";
+"get_started" = "ابدأ";
+
+// MARK: - Currency
+"recent_currencies" = "الأخيرة";
+"all_currencies" = "جميع العملات";
+"search_results" = "نتائج البحث";
+"search_currencies" = "بحث عن العملات...";
+"youre_owed" = "مستحق لك";
+
+// MARK: - Balance Dashboard
+"your_balance" = "رصيدك";
+"all_balanced" = "كل شيء متوازن!";
+"everyone_settled_up" = "الجميع سوّى حسابه";
+"all_settled_up" = "تمت التسوية الكاملة";
+
+// MARK: - Sync Status
+"synced" = "متزامن";
+"pending_sync" = "في انتظار المزامنة";
+"sync_failed" = "فشلت المزامنة";

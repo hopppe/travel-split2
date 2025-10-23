@@ -55,6 +55,7 @@ struct Trip: Identifiable, Codable {
     var expenses: [Expense]
     var inviteCode: String // Shareable code for inviting others
     var baseCurrencyCode: String // Base currency for balance calculations
+    var participantIds: [String]? // Denormalized array of participant IDs for efficient querying
     
     // For creating a new trip
     static func create(name: String, description: String, creator: User) -> Trip {
@@ -67,8 +68,22 @@ struct Trip: Identifiable, Codable {
             participants: [creator],
             expenses: [],
             inviteCode: String(UUID().uuidString.prefix(8)), // Create shortened invite code
-            baseCurrencyCode: "USD" // Default to USD
+            baseCurrencyCode: "USD", // Default to USD
+            participantIds: [creator.id] // Initialize with creator's ID
         )
+    }
+
+    // Helper method to compute participantIds from participants
+    // This includes both direct participant IDs and claimedByUserId for unclaimed participants
+    mutating func updateParticipantIds() {
+        var ids = Set<String>()
+        for participant in participants {
+            ids.insert(participant.id)
+            if let claimedById = participant.claimedByUserId {
+                ids.insert(claimedById)
+            }
+        }
+        participantIds = Array(ids)
     }
     
     // Computed property for base currency symbol
@@ -80,6 +95,7 @@ struct Trip: Identifiable, Codable {
             "JPY": "¥",
             "CAD": "C$",
             "AUD": "A$",
+            "CHF": "CHF",
             "INR": "₹",
             "RUB": "₽",
             "KRW": "₩",
@@ -89,7 +105,27 @@ struct Trip: Identifiable, Codable {
             "UAH": "₴",
             "NGN": "₦",
             "ZAR": "R",
-            "SAR": "﷼"
+            "SAR": "﷼",
+            "JOD": "JD",
+            "AED": "د.إ",
+            "CNY": "¥",
+            "BRL": "R$",
+            "SEK": "kr",
+            "NOK": "kr",
+            "DKK": "kr",
+            "PLN": "zł",
+            "CZK": "Kč",
+            "HUF": "Ft",
+            "RON": "lei",
+            "BGN": "лв",
+            "ISK": "kr",
+            "NZD": "NZ$",
+            "SGD": "S$",
+            "THB": "฿",
+            "MYR": "RM",
+            "IDR": "Rp",
+            "ILS": "₪",
+            "MXN": "$"
         ]
         return symbols[baseCurrencyCode] ?? "$"
     }
@@ -181,7 +217,12 @@ struct Expense: Identifiable, Codable {
     var paidBy: User
     var shares: [ExpenseShare]
     var currencyCode: String?
-    
+    var addedBy: User?
+
+    // Converted amount fields (locked at creation time)
+    var convertedAmount: Double?
+    var convertedCurrencyCode: String?
+
     // Computed property for currency symbol
     var currencySymbol: String {
         let symbols = [
@@ -191,6 +232,7 @@ struct Expense: Identifiable, Codable {
             "JPY": "¥",
             "CAD": "C$",
             "AUD": "A$",
+            "CHF": "CHF",
             "INR": "₹",
             "RUB": "₽",
             "KRW": "₩",
@@ -202,19 +244,50 @@ struct Expense: Identifiable, Codable {
             "ZAR": "R",
             "SAR": "﷼",
             "JOD": "JD",
-            "AED": "د.إ"
+            "AED": "د.إ",
+            "CNY": "¥",
+            "BRL": "R$",
+            "SEK": "kr",
+            "NOK": "kr",
+            "DKK": "kr",
+            "PLN": "zł",
+            "CZK": "Kč",
+            "HUF": "Ft",
+            "RON": "lei",
+            "BGN": "лв",
+            "ISK": "kr",
+            "NZD": "NZ$",
+            "SGD": "S$",
+            "THB": "฿",
+            "MYR": "RM",
+            "IDR": "Rp",
+            "ILS": "₪",
+            "MXN": "$"
         ]
         return symbols[currencyCode ?? "USD"] ?? "$"
     }
     
     // For creating a new expense with equal splits
-    static func createEqual(title: String, amount: Double, paidBy: User, participants: [User], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
-        
+    static func createEqual(title: String, amount: Double, paidBy: User, participants: [User], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD", addedBy: User? = nil, baseCurrencyCode: String = "USD") -> Expense {
+
         let equalAmount = amount / Double(participants.count)
         let shares = participants.map { user in
             ExpenseShare(user: user, amount: equalAmount, percentage: 100.0 / Double(participants.count))
         }
-        
+
+        // Calculate converted amount if currencies differ
+        var convertedAmount: Double? = nil
+        var convertedCurrencyCode: String? = nil
+
+        if currencyCode != baseCurrencyCode {
+            convertedAmount = CurrencyConverterService.shared.convert(
+                amount: amount,
+                from: currencyCode,
+                to: baseCurrencyCode
+            )
+            convertedCurrencyCode = baseCurrencyCode
+        }
+
         return Expense(
             id: UUID().uuidString,
             title: title,
@@ -224,13 +297,29 @@ struct Expense: Identifiable, Codable {
             category: category,
             paidBy: paidBy,
             shares: shares,
-            currencyCode: currencyCode
+            currencyCode: currencyCode,
+            addedBy: addedBy,
+            convertedAmount: convertedAmount,
+            convertedCurrencyCode: convertedCurrencyCode
         )
     }
     
     // For creating a custom split expense
-    static func createCustom(title: String, amount: Double, paidBy: User, shares: [ExpenseShare], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD") -> Expense {
-        
+    static func createCustom(title: String, amount: Double, paidBy: User, shares: [ExpenseShare], date: Date = Date(), category: ExpenseCategory = .other, currencyCode: String = "USD", addedBy: User? = nil, baseCurrencyCode: String = "USD") -> Expense {
+
+        // Calculate converted amount if currencies differ
+        var convertedAmount: Double? = nil
+        var convertedCurrencyCode: String? = nil
+
+        if currencyCode != baseCurrencyCode {
+            convertedAmount = CurrencyConverterService.shared.convert(
+                amount: amount,
+                from: currencyCode,
+                to: baseCurrencyCode
+            )
+            convertedCurrencyCode = baseCurrencyCode
+        }
+
         return Expense(
             id: UUID().uuidString,
             title: title,
@@ -240,7 +329,10 @@ struct Expense: Identifiable, Codable {
             category: category,
             paidBy: paidBy,
             shares: shares,
-            currencyCode: currencyCode
+            currencyCode: currencyCode,
+            addedBy: addedBy,
+            convertedAmount: convertedAmount,
+            convertedCurrencyCode: convertedCurrencyCode
         )
     }
 }

@@ -21,19 +21,27 @@ class TripExpenseManager {
     
     // MARK: - Expense Management
     
-    func addExpense(title: String, amount: Double, paidBy: User, splitType: SplitType, 
-                    customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
+    func addExpense(title: String, amount: Double, paidBy: User, splitType: SplitType,
+                    customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other,
                     currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
         }
-        
+
+        // Fetch latest currency rates if expense currency differs from trip base currency
+        if currencyCode != trip.baseCurrencyCode {
+            CurrencyConverterService.shared.fetchLatestRates()
+        }
+
         // Safeguard against using an invalid paidBy user
         // Make sure the paidBy user is in the participant list (and get the latest version)
         if let validPaidBy = trip.participants.first(where: { $0.id == paidBy.id }) {
             var expense: Expense
-            
+
+            // Get current user who is adding this expense
+            let addedByUser = tripViewModel.findCurrentUserInTrip()
+
             switch splitType {
             case .equal:
                 // Make sure we're using valid participant references from the trip
@@ -45,14 +53,16 @@ class TripExpenseManager {
                     participants: trip.participants,
                     date: date,
                     category: category,
-                    currencyCode: currencyCode
+                    currencyCode: currencyCode,
+                    addedBy: addedByUser,
+                    baseCurrencyCode: trip.baseCurrencyCode
                 )
             case .custom:
                 guard let shares = customShares, !shares.isEmpty else {
                     tripViewModel.errorMessage = "Custom shares must be provided for custom split"
                     return
                 }
-                
+
                 // Validate and update shares to use valid participant references
                 var validShares = [ExpenseShare]()
                 for share in shares {
@@ -64,7 +74,7 @@ class TripExpenseManager {
                         return
                     }
                 }
-                
+
                 expense = Expense.createCustom(
                     title: title,
                     amount: amount,
@@ -72,28 +82,39 @@ class TripExpenseManager {
                     shares: validShares,
                     date: date,
                     category: category,
-                    currencyCode: currencyCode
+                    currencyCode: currencyCode,
+                    addedBy: addedByUser,
+                    baseCurrencyCode: trip.baseCurrencyCode
                 )
             }
-            
+
             // Add expense to trip
             trip.expenses.append(expense)
-            
+
+            // Haptic feedback for successful expense addition
+            HapticManager.shared.success()
+
             // Update trip in the view model
             tripViewModel.updateTrip(trip)
         } else {
             tripViewModel.errorMessage = "Selected payer is not a valid participant in this trip"
+            HapticManager.shared.error()
         }
     }
     
-    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType, 
-                      customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other, 
+    func updateExpense(id: String, title: String, amount: Double, paidBy: User, splitType: SplitType,
+                      customShares: [ExpenseShare]? = nil, category: ExpenseCategory = .other,
                       currencyCode: String = "USD", date: Date = Date()) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
             return
         }
-        
+
+        // Fetch latest currency rates if expense currency differs from trip base currency
+        if currencyCode != trip.baseCurrencyCode {
+            CurrencyConverterService.shared.fetchLatestRates()
+        }
+
         // Find the expense index in the trip
         guard let expenseIndex = trip.expenses.firstIndex(where: { $0.id == id }) else {
             tripViewModel.errorMessage = "Expense not found"
@@ -111,7 +132,8 @@ class TripExpenseManager {
                 participants: trip.participants,
                 date: date,
                 category: category,
-                currencyCode: currencyCode
+                currencyCode: currencyCode,
+                baseCurrencyCode: trip.baseCurrencyCode
             )
         case .custom:
             guard let shares = customShares, !shares.isEmpty else {
@@ -125,14 +147,15 @@ class TripExpenseManager {
                 shares: shares,
                 date: date,
                 category: category,
-                currencyCode: currencyCode
+                currencyCode: currencyCode,
+                baseCurrencyCode: trip.baseCurrencyCode
             )
         }
-        
-        // Preserve the original ID
-        let originalId = trip.expenses[expenseIndex].id
+
+        // Preserve the original ID and addedBy
+        let originalExpense = trip.expenses[expenseIndex]
         updatedExpense = Expense(
-            id: originalId,
+            id: originalExpense.id,
             title: updatedExpense.title,
             description: updatedExpense.description,
             amount: updatedExpense.amount,
@@ -140,7 +163,10 @@ class TripExpenseManager {
             category: updatedExpense.category,
             paidBy: updatedExpense.paidBy,
             shares: updatedExpense.shares,
-            currencyCode: updatedExpense.currencyCode
+            currencyCode: updatedExpense.currencyCode,
+            addedBy: originalExpense.addedBy, // Preserve who originally added this expense
+            convertedAmount: updatedExpense.convertedAmount,
+            convertedCurrencyCode: updatedExpense.convertedCurrencyCode
         )
         
         // Update the expense
@@ -153,12 +179,16 @@ class TripExpenseManager {
     func deleteExpense(withId id: String) {
         guard var trip = tripViewModel.currentTrip else {
             tripViewModel.errorMessage = "No trip selected"
+            HapticManager.shared.error()
             return
         }
-        
+
         // Remove the expense
         trip.expenses.removeAll(where: { $0.id == id })
-        
+
+        // Light haptic for deletion
+        HapticManager.shared.lightImpact()
+
         // Update trip in the view model
         tripViewModel.updateTrip(trip)
     }
@@ -169,7 +199,12 @@ class TripExpenseManager {
             tripViewModel.errorMessage = "No trip selected"
             return
         }
-        
+
+        // Fetch latest currency rates if payment currency differs from trip base currency
+        if currencyCode != trip.baseCurrencyCode {
+            CurrencyConverterService.shared.fetchLatestRates()
+        }
+
         // Make sure both users are valid participants in the trip
         guard let validPaidBy = trip.participants.first(where: { $0.id == paidBy.id }),
               let validPaidTo = trip.participants.first(where: { $0.id == paidTo.id }) else {
@@ -180,7 +215,23 @@ class TripExpenseManager {
         // Create a special payment expense that only involves two people
         // In this expense, one person pays and only the other person has a share
         let share = ExpenseShare(user: validPaidTo, amount: amount, percentage: 100.0)
-        
+
+        // Get current user who is adding this payment
+        let addedByUser = tripViewModel.findCurrentUserInTrip()
+
+        // Calculate converted amount if currencies differ
+        var convertedAmount: Double? = nil
+        var convertedCurrencyCode: String? = nil
+
+        if currencyCode != trip.baseCurrencyCode {
+            convertedAmount = CurrencyConverterService.shared.convert(
+                amount: amount,
+                from: currencyCode,
+                to: trip.baseCurrencyCode
+            )
+            convertedCurrencyCode = trip.baseCurrencyCode
+        }
+
         // Create a payment with special metadata to identify it as a payment
         let paymentExpense = Expense(
             id: UUID().uuidString,
@@ -191,12 +242,18 @@ class TripExpenseManager {
             category: .other, // Could create a dedicated payment category if desired
             paidBy: validPaidBy,
             shares: [share],
-            currencyCode: currencyCode
+            currencyCode: currencyCode,
+            addedBy: addedByUser,
+            convertedAmount: convertedAmount,
+            convertedCurrencyCode: convertedCurrencyCode
         )
         
         // Add expense to trip
         trip.expenses.append(paymentExpense)
-        
+
+        // Haptic feedback for successful payment recording
+        HapticManager.shared.success()
+
         // Update trip in the view model
         tripViewModel.updateTrip(trip)
     }

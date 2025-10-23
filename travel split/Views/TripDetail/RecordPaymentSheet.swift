@@ -23,10 +23,12 @@ struct RecordPaymentSheet: View {
     
     // Language manager for RTL support
     @EnvironmentObject var languageManager: LanguageManager
-    
-    // Currency options - same as in other expense sheets
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼", "JD", "د.إ"]
-    
+
+    // Get currency options from centralized service
+    private var currencyOptions: [String] {
+        CurrencyConverterService.shared.getAllCurrencySymbols()
+    }
+
     var body: some View {
         Form {
             // Payment Details Section
@@ -54,11 +56,19 @@ struct RecordPaymentSheet: View {
                 // Payer selector (who made the payment)
                 Picker("from".localized, selection: $selectedPayer) {
                     if let currentUser = viewModel.findCurrentUserInTrip() {
-                        Text(currentUser.name).tag(Optional(currentUser))
+                        HStack {
+                            ParticipantAvatar(participant: currentUser, size: 20)
+                            Text(currentUser.name)
+                        }
+                        .tag(Optional(currentUser))
                     }
                     ForEach(viewModel.currentTrip?.participants ?? []) { participant in
                         if participant.id != viewModel.findCurrentUserInTrip()?.id {
-                            Text(participant.name).tag(Optional(participant))
+                            HStack {
+                                ParticipantAvatar(participant: participant, size: 20)
+                                Text(participant.name)
+                            }
+                            .tag(Optional(participant))
                         }
                     }
                 }
@@ -69,7 +79,11 @@ struct RecordPaymentSheet: View {
                     Text("select_recipient".localized).tag(nil as User?)
                     ForEach(viewModel.currentTrip?.participants ?? []) { participant in
                         if participant.id != selectedPayer?.id {
-                            Text(participant.name).tag(Optional(participant))
+                            HStack {
+                                ParticipantAvatar(participant: participant, size: 20)
+                                Text(participant.name)
+                            }
+                            .tag(Optional(participant))
                         }
                     }
                 }
@@ -91,7 +105,10 @@ struct RecordPaymentSheet: View {
             Section {
                 VStack(spacing: 12) {
                     // Record Payment button
-                    Button(action: recordPayment) {
+                    Button(action: {
+                        HapticManager.shared.lightImpact()
+                        recordPayment()
+                    }) {
                         Text("record_payment".localized)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -102,7 +119,10 @@ struct RecordPaymentSheet: View {
                     .disabled(!isFormValid)
                     
                     // Settle All Balances button
-                    Button(action: settleAllBalances) {
+                    Button(action: {
+                        HapticManager.shared.lightImpact()
+                        settleAllBalances()
+                    }) {
                         Text("settle_all_my_balances".localized)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -121,6 +141,7 @@ struct RecordPaymentSheet: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("cancel".localized) {
+                    HapticManager.shared.lightImpact()
                     dismiss()
                 }
             }
@@ -162,11 +183,7 @@ struct RecordPaymentSheet: View {
         .overlay(
             Group {
                 if isSettlingAllDebts {
-                    ProgressView("recording_payments".localized)
-                        .padding()
-                        .background(Color(.systemBackground).opacity(0.8))
-                        .cornerRadius(10)
-                        .shadow(radius: 2)
+                    LoadingOverlay(message: "recording_payments")
                 }
             }
         )
@@ -201,8 +218,9 @@ struct RecordPaymentSheet: View {
     }
     
     /// Get numeric amount from string input
+    /// Handles Arabic-Indic numerals, various decimal separators, and localized number formats
     private func getAmount() -> Double? {
-        return Double(paymentAmount.replacingOccurrences(of: ",", with: "."))
+        return paymentAmount.toDoubleFromLocalizedNumber()
     }
     
     /// Get currency code from symbol

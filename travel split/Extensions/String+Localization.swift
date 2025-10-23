@@ -14,11 +14,65 @@ extension String {
     var localized: String {
         return LanguageManager.shared.getLocalizedString(for: self)
     }
-    
+
     /// Returns the localized string with arguments using our custom LanguageManager
     func localized(with arguments: CVarArg...) -> String {
         let format = LanguageManager.shared.getLocalizedString(for: self)
         return String(format: format, arguments: arguments)
+    }
+
+    /// Converts Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩) to Western numerals (0123456789)
+    /// Also handles Eastern Arabic numerals and other localized number formats
+    func convertingArabicNumeralsToWestern() -> String {
+        // Map of Arabic-Indic numerals to Western numerals
+        let arabicToWesternMap: [Character: Character] = [
+            "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+            "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+            // Eastern Arabic numerals (used in some regions)
+            "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+            "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9"
+        ]
+
+        var result = ""
+        for char in self {
+            if let westernChar = arabicToWesternMap[char] {
+                result.append(westernChar)
+            } else {
+                result.append(char)
+            }
+        }
+        return result
+    }
+
+    /// Converts string to Double, handling Arabic numerals, commas, and various decimal separators
+    /// Returns nil if the string cannot be parsed as a valid number
+    func toDoubleFromLocalizedNumber() -> Double? {
+        // First, convert Arabic numerals to Western
+        var normalized = self.convertingArabicNumeralsToWestern()
+
+        // Trim whitespace
+        normalized = normalized.trimmingCharacters(in: .whitespaces)
+
+        // Handle empty string
+        if normalized.isEmpty {
+            return nil
+        }
+
+        // Replace comma decimal separator with period (for European formats)
+        // But preserve comma as thousands separator if both comma and period exist
+        let hasComma = normalized.contains(",")
+        let hasPeriod = normalized.contains(".")
+
+        if hasComma && hasPeriod {
+            // If both exist, assume period is decimal and comma is thousands
+            normalized = normalized.replacingOccurrences(of: ",", with: "")
+        } else if hasComma && !hasPeriod {
+            // If only comma, it's likely the decimal separator
+            normalized = normalized.replacingOccurrences(of: ",", with: ".")
+        }
+
+        // Try to parse as Double
+        return Double(normalized)
     }
 }
 

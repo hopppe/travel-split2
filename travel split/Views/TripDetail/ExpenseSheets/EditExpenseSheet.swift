@@ -31,10 +31,12 @@ struct EditExpenseSheet: View {
     
     // Language manager for RTL support
     @EnvironmentObject var languageManager: LanguageManager
-    
-    // Currency options
-    private let currencyOptions = ["$", "€", "£", "¥", "₹", "₽", "₩", "A$", "C$", "HK$", "₱", "₺", "₴", "₦", "R", "﷼", "JD", "د.إ"]
-    
+
+    // Get currency options from centralized service
+    private var currencyOptions: [String] {
+        CurrencyConverterService.shared.getAllCurrencySymbols()
+    }
+
     // Initialize with expense data
     init(viewModel: TripViewModel, expense: Expense) {
         self.viewModel = viewModel
@@ -90,7 +92,11 @@ struct EditExpenseSheet: View {
                         
                         Picker("", selection: $selectedPayer) {
                             ForEach(trip.participants) { user in
-                                Text(user.name).tag(user as User?)
+                                HStack {
+                                    ParticipantAvatar(participant: user, size: 20)
+                                    Text(user.name)
+                                }
+                                .tag(user as User?)
                             }
                         }
                         .pickerStyle(.menu)
@@ -168,15 +174,18 @@ struct EditExpenseSheet: View {
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(
             leading: Button("cancel".localized) {
+                HapticManager.shared.lightImpact()
                 dismiss()
             },
             trailing: Button("save".localized) {
+                HapticManager.shared.lightImpact()
                 saveExpense()
             }
             .disabled(!isFormValid())
         )
         .safeAreaInset(edge: .bottom) {
             Button(role: .destructive) {
+                HapticManager.shared.warning()
                 viewModel.deleteExpense(withId: expense.id)
                 dismiss()
             } label: {
@@ -205,6 +214,7 @@ struct EditExpenseSheet: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .navigationBarItems(
                         trailing: Button("done".localized) {
+                            HapticManager.shared.lightImpact()
                             showDatePicker = false
                         }
                     )
@@ -314,40 +324,29 @@ struct EditExpenseSheet: View {
     }
     
     /// Convert the expense amount string to a Double
+    /// Handles Arabic-Indic numerals, various decimal separators, and localized number formats
     private func getAmount() -> Double? {
-        return Double(expenseAmount.replacingOccurrences(of: ",", with: "."))
+        return expenseAmount.toDoubleFromLocalizedNumber()
     }
     
     /// Update split amounts when total amount or participants change
     private func updateSplitAmounts() {
-        guard let amount = getAmount(), amount > 0, !selectedParticipants.isEmpty else {
+        guard !selectedParticipants.isEmpty else {
             return
         }
-        
-        // Calculate total of all current amounts
-        let currentTotal = selectedParticipants.reduce(0.0) { total, participant in
-            total + (participantAmounts[participant.id] ?? 0)
+
+        let amount = getAmount() ?? 0
+
+        // Always use equal split when main amount changes
+        // This avoids the "one step behind" issue with proportional adjustment
+        let equalAmount = amount > 0 ? amount / Double(selectedParticipants.count) : 0
+
+        // Force a new dictionary to trigger SwiftUI updates
+        var newAmounts = participantAmounts
+        for participant in selectedParticipants {
+            newAmounts[participant.id] = equalAmount
         }
-        
-        // Only initialize with equal amounts if no amounts exist yet or total is zero
-        if currentTotal == 0 {
-            let equalAmount = amount / Double(selectedParticipants.count)
-            for participant in selectedParticipants {
-                participantAmounts[participant.id] = equalAmount
-            }
-        } else if abs(currentTotal - amount) > 0.01 {
-            // If there's a mismatch between total and amount, adjust proportionally
-            let adjustmentFactor = amount / currentTotal
-            for participant in selectedParticipants {
-                if let currentAmount = participantAmounts[participant.id], currentAmount > 0 {
-                    participantAmounts[participant.id] = currentAmount * adjustmentFactor
-                } else {
-                    // Initialize any unset amounts to equal share
-                    let equalShare = amount / Double(selectedParticipants.count)
-                    participantAmounts[participant.id] = equalShare
-                }
-            }
-        }
+        participantAmounts = newAmounts
     }
     
     /// Update other participant amounts when one amount is changed
@@ -355,14 +354,14 @@ struct EditExpenseSheet: View {
         guard let totalAmount = getAmount(), totalAmount > 0, selectedParticipants.count > 1 else {
             return
         }
-        
+
         // Calculate current total to check if adjustment needed
         let changedAmount = participantAmounts[changedUserId] ?? 0
         let otherParticipants = selectedParticipants.filter { $0.id != changedUserId }
         let currentTotal = changedAmount + otherParticipants.reduce(0.0) { total, participant in
             total + (participantAmounts[participant.id] ?? 0)
         }
-        
+
         // Only adjust if there's a meaningful difference
         if abs(currentTotal - totalAmount) > 0.01 {
             // If there's only one other participant, just adjust their amount
@@ -373,25 +372,31 @@ struct EditExpenseSheet: View {
             } else {
                 // Otherwise, distribute remaining amount proportionally among others
                 let remainingAmount = max(0, totalAmount - changedAmount) // Prevent negative remaining
-                
+
                 // Get current total of other participants
                 let otherTotal = otherParticipants.reduce(0.0) { total, participant in
                     total + (participantAmounts[participant.id] ?? 0)
                 }
-                
-                if otherTotal > 0 {
+
+                // Prevent division by zero and NaN
+                if otherTotal > 0 && !otherTotal.isNaN && !otherTotal.isInfinite && remainingAmount.isFinite {
                     // Distribute proportionally
                     let adjustmentFactor = remainingAmount / otherTotal
-                    for participant in otherParticipants {
-                        if let currentAmount = participantAmounts[participant.id] {
-                            participantAmounts[participant.id] = currentAmount * adjustmentFactor
+                    // Ensure adjustment factor is valid
+                    if adjustmentFactor.isFinite && !adjustmentFactor.isNaN {
+                        for participant in otherParticipants {
+                            if let currentAmount = participantAmounts[participant.id] {
+                                participantAmounts[participant.id] = currentAmount * adjustmentFactor
+                            }
                         }
                     }
                 } else {
-                    // If otherTotal is 0, distribute equally
+                    // If otherTotal is 0 or invalid, distribute equally
                     let equalShare = remainingAmount / Double(otherParticipants.count)
-                    for participant in otherParticipants {
-                        participantAmounts[participant.id] = equalShare
+                    if equalShare.isFinite && !equalShare.isNaN {
+                        for participant in otherParticipants {
+                            participantAmounts[participant.id] = equalShare
+                        }
                     }
                 }
             }

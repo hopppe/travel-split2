@@ -135,12 +135,39 @@ class TripBalanceCalculator {
             tripViewModel.errorMessage = "No trip selected"
             return
         }
-        
-        // Update the base currency
-        trip.baseCurrencyCode = currencyCode
-        
-        // Update trip in the view model
-        tripViewModel.updateTrip(trip)
+
+        // Fetch latest rates before recalculating (ensures we use current rates)
+        CurrencyConverterService.shared.fetchLatestRates { success in
+            // Update the base currency
+            trip.baseCurrencyCode = currencyCode
+
+            // Recalculate converted amounts for all expenses with the new base currency
+            for (index, expense) in trip.expenses.enumerated() {
+                let expenseCurrency = expense.currencyCode ?? "USD"
+
+                // Only recalculate if currencies differ
+                if expenseCurrency != currencyCode {
+                    let convertedAmount = CurrencyConverterService.shared.convert(
+                        amount: expense.amount,
+                        from: expenseCurrency,
+                        to: currencyCode
+                    )
+
+                    // Update the expense with new converted amount
+                    trip.expenses[index].convertedAmount = convertedAmount
+                    trip.expenses[index].convertedCurrencyCode = currencyCode
+                } else {
+                    // Same currency - clear converted amount
+                    trip.expenses[index].convertedAmount = nil
+                    trip.expenses[index].convertedCurrencyCode = nil
+                }
+            }
+
+            print("✅ Recalculated \(trip.expenses.count) expenses for new base currency: \(currencyCode)")
+
+            // Update trip in the view model
+            self.tripViewModel.updateTrip(trip)
+        }
     }
     
     // Get the current base currency code

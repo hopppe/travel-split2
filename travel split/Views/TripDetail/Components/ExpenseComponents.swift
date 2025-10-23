@@ -20,13 +20,14 @@ struct ParticipantRow: View {
     let onAmountChanged: (Double?) -> Void
     var shouldClearOnEdit: Bool = false
     var decimalPlaces: Int = 2
-    
+
     @State private var editableAmount: String = ""
     @State private var isFocused: Bool = false
-    
+    @State private var isInternalUpdate: Bool = false
+
     // Language manager for RTL support
     @EnvironmentObject var languageManager: LanguageManager
-    
+
     var body: some View {
         HStack {
             // Checkbox and name
@@ -34,31 +35,34 @@ struct ParticipantRow: View {
                 HStack {
                     Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                         .foregroundColor(isSelected ? .accentColor : .gray)
-                    
+
                     Text(user.name)
                         .foregroundColor(.primary)
                         .rtlAwareAlignment()
                 }
             }
             .buttonStyle(PlainButtonStyle())
-            
+
             Spacer()
-            
+
             // Only show amount field if participant is selected
             if isSelected {
                 HStack(spacing: 4) {
                     Text(currencySymbol)
                         .foregroundColor(.secondary)
                         .font(.subheadline)
-                    
-                    TextField("0.00", text: $editableAmount)
+
+                    TextField("zero_placeholder".localized, text: $editableAmount)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(languageManager.isRTL ? .trailing : .leading)
                         .frame(width: 80)
-                        .onReceive(editableAmount.publisher.collect()) { _ in
-                            // Convert text to double and notify parent
-                            let doubleValue = Double(editableAmount.replacingOccurrences(of: ",", with: "."))
-                            onAmountChanged(doubleValue)
+                        .onChange(of: editableAmount) { newValue in
+                            // Only process user-initiated changes
+                            if !isInternalUpdate && isFocused {
+                                // Convert text to double, handling Arabic numerals and various formats
+                                let doubleValue = newValue.toDoubleFromLocalizedNumber()
+                                onAmountChanged(doubleValue)
+                            }
                         }
                         .onTapGesture {
                             isFocused = true
@@ -73,27 +77,26 @@ struct ParticipantRow: View {
             // Initialize the text field with the current amount
             updateEditableAmount()
         }
-        .onChange(of: amount) { _ in
-            // Update text field when amount changes externally (unless user is editing)
-            if !isFocused {
-                updateEditableAmount()
-            }
-        }
-        .onChange(of: isFocused) { focused in
-            if !focused {
-                // When focus is lost, ensure the display is up to date
-                updateEditableAmount()
-            }
+        .onChange(of: amount) { newAmount in
+            // Always update when amount changes from parent (main amount field changed)
+            // The isInternalUpdate flag prevents feedback loops
+            updateEditableAmount(with: newAmount)
         }
     }
-    
+
     /// Update the editable amount text field
-    private func updateEditableAmount() {
-        if amount > 0 {
-            editableAmount = String(format: "%.\(decimalPlaces)f", amount)
+    private func updateEditableAmount(with value: Double? = nil) {
+        isInternalUpdate = true
+        let amountToUse = value ?? amount
+        let newValue: String
+        if amountToUse > 0 {
+            newValue = String(format: "%.\(decimalPlaces)f", amountToUse)
         } else {
-            editableAmount = ""
+            newValue = ""
         }
+        print("   💵 ParticipantRow[\(user.name)] - Updating display: \(amountToUse) → '\(newValue)'")
+        editableAmount = newValue
+        isInternalUpdate = false
     }
 }
 
@@ -103,85 +106,39 @@ struct ExpenseCurrencyPickerView: View {
     @Binding var currencySymbol: String
     @Binding var isPresented: Bool
     let options: [String]
-    
-    // Currency option with symbol and code
-    private struct CurrencyOption: Identifiable {
-        let symbol: String
-        let code: String
-        let name: String
-        var id: String { symbol }
-        
-        var displayText: String {
-            "\(symbol) - \(code)"
-        }
+
+    // Get currency data from centralized service
+    private var currencyOptions: [CurrencyConverterService.CurrencyInfo] {
+        CurrencyConverterService.shared.getAllCurrencies()
     }
-    
-    // Map currency symbols to codes and names
-    private var currencyOptions: [CurrencyOption] {
-        let currencyCodes = [
-            "$": "USD",
-            "€": "EUR",
-            "£": "GBP",
-            "¥": "JPY",
-            "₹": "INR",
-            "₽": "RUB",
-            "₩": "KRW",
-            "A$": "AUD",
-            "C$": "CAD",
-            "HK$": "HKD",
-            "₱": "PHP",
-            "₺": "TRY",
-            "₴": "UAH",
-            "₦": "NGN",
-            "R": "ZAR",
-            "﷼": "SAR"
-        ]
-        
-        let currencyNames = [
-            "USD": "US Dollar",
-            "EUR": "Euro",
-            "GBP": "British Pound",
-            "JPY": "Japanese Yen",
-            "INR": "Indian Rupee",
-            "RUB": "Russian Ruble",
-            "KRW": "Korean Won",
-            "AUD": "Australian Dollar",
-            "CAD": "Canadian Dollar",
-            "HKD": "Hong Kong Dollar",
-            "PHP": "Philippine Peso",
-            "TRY": "Turkish Lira",
-            "UAH": "Ukrainian Hryvnia",
-            "NGN": "Nigerian Naira",
-            "ZAR": "South African Rand",
-            "SAR": "Saudi Riyal"
-        ]
-        
-        return options.compactMap { symbol in
-            guard let code = currencyCodes[symbol] else { return nil }
-            let name = currencyNames[code] ?? code
-            return CurrencyOption(symbol: symbol, code: code, name: name)
-        }.sorted { $0.code < $1.code }
-    }
-    
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(currencyOptions) { option in
+                ForEach(currencyOptions, id: \.code) { currency in
                     Button(action: {
-                        currencySymbol = option.symbol
+                        currencySymbol = currency.symbol
                         isPresented = false
                     }) {
-                        HStack {
-                            Text(option.symbol)
+                        HStack(spacing: 12) {
+                            // Flag emoji
+                            Text(currency.flag)
                                 .font(.title2)
+                                .frame(width: 40)
+
+                            // Currency symbol
+                            Text(currency.symbol)
+                                .font(.title3)
                                 .frame(width: 50, alignment: .leading)
-                            
-                            Text(option.name)
+                                .foregroundColor(.secondary)
+
+                            // Currency name
+                            Text(currency.name)
                                 .font(.headline)
-                            
+
                             Spacer()
-                            
-                            if option.symbol == currencySymbol {
+
+                            if currency.symbol == currencySymbol {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(.accentColor)
                             }
@@ -191,11 +148,11 @@ struct ExpenseCurrencyPickerView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .navigationTitle("Select Currency")
+            .navigationTitle("select_currency_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }

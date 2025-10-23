@@ -22,6 +22,7 @@ playground.xcworkspace
 
 # Xcode Module Cache
 ModuleCache.noindex/
+**/ModuleCache.noindex/
 
 # CocoaPods
 Pods/

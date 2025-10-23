@@ -42,11 +42,11 @@ struct CurrencyPickerView: View {
                     .foregroundColor(.primary)
                 }
             }
-            .navigationTitle("Select Currency")
+            .navigationTitle("select_currency_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }
@@ -60,10 +60,12 @@ struct CurrencyCodePickerView: View {
     @Binding var currencyCode: String
     @Binding var isPresented: Bool
     var onCurrencySelected: ((String) -> Void)? = nil
-    
-    // Get currency data from service
-    private let currencyOptions = CurrencyConverterService.shared.getAllCurrencySymbolsWithCodes()
-    
+
+    // Get currency data from centralized service
+    private var currencyOptions: [CurrencyConverterService.CurrencyInfo] {
+        CurrencyConverterService.shared.getAllCurrencies()
+    }
+
     var body: some View {
         NavigationView {
             List {
@@ -73,21 +75,23 @@ struct CurrencyCodePickerView: View {
                         isPresented = false
                         onCurrencySelected?(currency.code)
                     }) {
-                        HStack {
-                            Text(currency.symbol)
+                        HStack(spacing: 12) {
+                            // Flag emoji
+                            Text(currency.flag)
                                 .font(.title2)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(UIColor.systemGray5))
-                                .cornerRadius(8)
-                            
-                            Text(currency.code)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 8)
-                            
+                                .frame(width: 40)
+
+                            // Currency name (full name, not abbreviation)
+                            Text(currency.name)
+                                .font(.headline)
+
                             Spacer()
-                            
+
+                            // Currency code (abbreviation)
+                            Text(currency.code)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
                             if currency.code == currencyCode {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(.accentColor)
@@ -97,11 +101,11 @@ struct CurrencyCodePickerView: View {
                     .foregroundColor(.primary)
                 }
             }
-            .navigationTitle("Select Currency")
+            .navigationTitle("select_currency_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }

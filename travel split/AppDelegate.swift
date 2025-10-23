@@ -8,6 +8,8 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseFirestore
+import FirebaseMessaging
+import UserNotifications
 
 // MARK: - App Delegate for Firebase Configuration
 
@@ -16,32 +18,61 @@ import FirebaseFirestore
 class AppDelegate: NSObject, UIApplicationDelegate {
     // Property to store the URL that launched the app
     var launchURL: URL?
-    
+
     /// Configure Firebase when the app launches
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure()
-        
+
         // Configure Firestore settings after Firebase is initialized
         let settings = FirestoreSettings()
-        
+
         // Enable cache with a reasonable size (100MB)
         let cacheSize: Int64 = 100 * 1024 * 1024 // 100MB
         settings.cacheSettings = PersistentCacheSettings(sizeBytes: NSNumber(value: cacheSize))
-        
+
         Firestore.firestore().settings = settings
-        
+
         print("Firebase successfully configured in AppDelegate with offline persistence enabled")
-        
+
+        // Configure push notifications
+        configurePushNotifications(application)
+
         // Check if app was launched from a URL (deep link)
         if let url = launchOptions?[.url] as? URL {
             // Store the launch URL for later use
             self.launchURL = url
             handleDeepLink(url)
         }
-        
+
         return true
+    }
+
+    /// Configure push notifications with Firebase Cloud Messaging
+    private func configurePushNotifications(_ application: UIApplication) {
+        // Set notification delegate
+        UNUserNotificationCenter.current().delegate = NotificationService.shared
+
+        // Set FCM messaging delegate
+        Messaging.messaging().delegate = NotificationService.shared
+
+        print("Push notifications configured")
+    }
+
+    /// Called when APNs registration succeeds
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print("Successfully registered for remote notifications")
+
+        // Pass device token to FCM
+        Messaging.messaging().apnsToken = deviceToken
+    }
+
+    /// Called when APNs registration fails
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("Failed to register for remote notifications: \(error.localizedDescription)")
     }
     
     /// Handle Universal Links (deep links) when the app is opened via a Universal Link

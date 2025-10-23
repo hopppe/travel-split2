@@ -52,6 +52,7 @@
 "description" = "Description";
 "amount" = "Amount";
 "paid_by" = "Paid By";
+"added_by" = "Added by";
 "split_between" = "Split Between";
 "save_expense" = "Save Expense";
 "update_expense" = "Update Expense";
@@ -377,4 +378,79 @@
 "record_payment_title" = "Record Payment";
 "select_currency_title" = "Select Currency";
 "recording_payments" = "Recording payments...";
-"payment_from_to" = "Payment from %@ to %@"; 
+"payment_from_to" = "Payment from %@ to %@";
+
+// MARK: - Additional UI Elements
+"close" = "Close";
+"zero_placeholder" = "0.00";
+"owes_to_format" = "%@ owes %@ to %@";
+"will_receive_from_format" = "%@ will receive %@ from %@";
+"debt_explanation" = "This shows the simplified debt after calculating all shared expenses.";
+"person_paid_format" = "%@ paid %@";
+"person_spent_format" = "%@ spent %@";
+"expenses_involved" = "Expenses Involved";
+"before_simplification" = "Before simplification:";
+"after_simplification" = "After simplification:";
+"net_balance_format" = "%@ had a net balance of %@";
+"everyone_settled_up_no_payments" = "Everyone is settled up! No payments are needed.";
+"highlighted_balance_explanation" = "The highlighted balance is part of this simplified solution, where %@ owes %@ to %@.";
+"most_efficient_settlement" = "This represents the most efficient way for everyone to settle up.";
+
+// MARK: - Group Creation and Sharing
+"group_created_title" = "Group Created!";
+"share_group_participants_added" = "Your group has been created with participants. Share the invite link so they can join and claim their accounts.";
+"share_group_invite_others" = "Share the invite link to invite others to join your group.";
+
+// MARK: - Push Notifications
+"notification_expense_added_title" = "New Expense";
+"notification_expense_added_body" = "%@ added %@ - %@ in %@";
+"notification_expense_updated_title" = "Expense Updated";
+"notification_expense_updated_body" = "%@ updated to %@ in %@";
+"notification_expense_deleted_title" = "Expense Deleted";
+"notification_expense_deleted_body" = "%@ was deleted from %@";
+"notification_payment_received_title" = "Payment Received";
+"notification_payment_received_body" = "%@ paid you %@ in %@";
+"notification_balance_settled_title" = "Balance Settled";
+"notification_balance_settled_body" = "Your balance is settled in %@ ✓";
+"notification_participant_joined_title" = "New Participant";
+"notification_participant_joined_body" = "%@ joined %@";
+"notification_participant_left_title" = "Participant Left";
+"notification_participant_left_body" = "%@ left %@";
+"notification_participant_claimed_title" = "Account Claimed";
+"notification_participant_claimed_body" = "%@ claimed their account in %@";
+"notification_added_to_trip_title" = "Added to Trip";
+"notification_added_to_trip_body" = "You were added to %@";
+
+// MARK: - Notification Settings
+"notifications" = "Notifications";
+"notifications_enabled" = "Enable Notifications";
+"notifications_description" = "Receive push notifications for expenses, payments, and group updates";
+
+// MARK: - Onboarding
+"onboarding_groups_title" = "Create or Join Groups";
+"onboarding_groups_description" = "Start by creating a new group for your trip or join an existing one with an invite code";
+"onboarding_expenses_title" = "Track Expenses";
+"onboarding_expenses_description" = "Add expenses, choose who paid and how to split them. We'll handle the math!";
+"onboarding_balances_title" = "Settle Balances";
+"onboarding_balances_description" = "See who owes what and settle up with one tap. Everything stays synced!";
+"skip" = "Skip";
+"next" = "Next";
+"get_started" = "Get Started";
+
+// MARK: - Currency
+"recent_currencies" = "Recent";
+"all_currencies" = "All Currencies";
+"search_results" = "Search Results";
+"search_currencies" = "Search currencies...";
+"youre_owed" = "You're owed";
+
+// MARK: - Balance Dashboard
+"your_balance" = "Your Balance";
+"all_balanced" = "All Balanced!";
+"everyone_settled_up" = "Everyone is settled up";
+"all_settled_up" = "All settled up";
+
+// MARK: - Sync Status
+"synced" = "Synced";
+"pending_sync" = "Pending sync";
+"sync_failed" = "Sync failed";

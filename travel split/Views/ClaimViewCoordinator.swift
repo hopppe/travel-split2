@@ -66,17 +66,17 @@ struct ClaimViewCoordinator: View {
                         .font(.headline)
                         .padding()
                     
-                    Button("Close") {
+                    Button("close".localized) {
                         showClaimSheet = false
                     }
                     .buttonStyle(.bordered)
                 }
             }
-            .navigationTitle("Join Trip")
+            .navigationTitle("join_trip".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         cancelJoining()
                     }
                 }
